@@ -15,7 +15,7 @@ struct Movie {
     id: String,
     title: String,
     year: u16,
-    stars: u8,
+    stars: f32,
 }
 
 #[derive(Serialize)]
@@ -28,7 +28,7 @@ struct GetMovie {
 // For heavy concurrent writes, consider sharding the database to improve performance.
 type DB = Arc<Mutex<HashMap<String, Movie>>>;
 
-// Lookup a movie given it's ID
+// Lookup a movie by ID
 async fn get_movie(Path(id): Path<String>, State(db): State<DB>) -> (StatusCode, Json<GetMovie>) {
     // Lock the database mutex for MT access. When db_guard is dropped lock is released
     let db_guard = db.lock().await;

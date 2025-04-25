@@ -4,7 +4,7 @@ A simple, self-contained web API using the [Axum](https://crates.io/crates/axum)
 
 This project demonstrates:
 
-- Defining data structures with `serde` for serialization
+- Defining data structures with `serde` for (de)serialization
 - Routing with path parameters and JSON bodies using Axum
 - Shared, thread-safe in-memory state with `Arc<Mutex<HashMap<...>>>`
 - Clean async error handling via the `anyhow` crate
@@ -21,7 +21,7 @@ by setting the `API_BIND_ADDR` environment variable:
 
 ```bash
 # Run the server on a custom address/port
-API_BIND_ADDR=0.0.0.0:3000 cargo run
+API_BIND_ADDR=0.0.0.0:8080 cargo run
 ```
 
 Then visit: [http://localhost:8080](http://localhost:8080)
@@ -30,13 +30,12 @@ Then visit: [http://localhost:8080](http://localhost:8080)
 
 ### `GET /get/{id}`
 
-Gets the movie with the given `id`.
-
-Returns the movie data as JSON if found, or an empty object with a 404 status if not.
+- Gets the movie with the given `id`.
+- Returns the movie data as JSON if found, or an empty object with a 404 status if not.
 
 **Example:**
 ```bash
-curl http://localhost:8080/get/tt0111161
+curl http://localhost:8080/get/t1994Qw22
 ```
 
 ### `POST /add`
@@ -46,10 +45,10 @@ Add a movie to the in-memory database.
 **Quick test with curl:**
 ```bash
 curl -X POST http://localhost:8080/add   -H "Content-Type: application/json"   -d '{
-        "id": "tt0111161",
-        "name": "The Shawshank Redemption",
+        "id": "t1994Qw22",
+        "title": "The Shawshank Redemption",
         "year": 1994,
-        "was_good": true
+        "stars": 3.5
       }'
 ```
 
@@ -59,15 +58,15 @@ Also check out the [`api-demo.sh`](./api-demo.sh) script for a more detailed usa
 
 This script:
 
-- Adds a sample movie
-- Fetches it by ID
+- Adds a sample movie with a unique ID
+- Fetches the same movie using its ID
 - Attempts to fetch a non-existent movie (to demonstrate 404 handling)
 
 Run it with:
 
 ```bash
-./api-demo.sh            # Quiet mode
-./api-demo.sh --verbose  # With full curl output
+./api-demo.sh
+./api-demo.sh --verbose
 ```
 
 ## License
