@@ -21,18 +21,21 @@ struct Movie {
 
 #[derive(Serialize)]
 struct GetMovie {
+    // Will be None if a Movie is not found under the lookup key.
     movie: Option<Movie>,
 }
 
-// Database is made thread-safe using Arc<Mutex<_>>.
+// The movie database is made thread-safe using Arc<Mutex<_>>.
+// Added as a state object (.with_state(db)) which AXUM will pass to each handler.
 // This approach is appropriate for light to moderate write contention.
 // For heavy concurrent writes, consider sharding the database to improve performance.
 type DB = Arc<Mutex<HashMap<String, Movie>>>;
 
-// Lookup a movie by ID
+// Lookup a movie by ID, suppress default tracing input parameters
 #[tracing::instrument(skip(db, id))]
 async fn get_movie(Path(id): Path<String>, State(db): State<DB>) -> (StatusCode, Json<GetMovie>) {
-    // Lock the database mutex for MT access. When db_guard is dropped lock is released
+    // Lock the database for safe concurrent access; the lock is released when db_guard is dropped
+    // Note: lock().await is infallible in tokio::sync::Mutex (no poison errors)
     let db_guard = db.lock().await;
 
     let (status, movie) = if let Some(movie) = db_guard.get(&id) {
@@ -50,17 +53,17 @@ async fn get_movie(Path(id): Path<String>, State(db): State<DB>) -> (StatusCode,
 async fn add_movie(State(db): State<DB>, Json(movie): Json<Movie>) -> StatusCode {
     info!("{}/{}", &movie.id, &movie.title);
 
-    // Lock the database mutex for MT access. When db_guard is dropped lock is released
+    // Lock the database for safe concurrent access; the lock is released when db_guard is dropped
     let mut db_guard = db.lock().await;
 
-    db_guard.insert(movie.id.clone(), movie.clone());
+    db_guard.insert(movie.id.clone(), movie);
 
     StatusCode::CREATED
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Set up tracing subscriber
+    // Initialize tracing subscriber to log to stdout (can be customized to log to a file or other formats)
     tracing_subscriber::fmt::init();
     tracing::info!("Starting axum server...");
 
@@ -75,19 +78,20 @@ async fn main() -> Result<()> {
                 r#"Welcome to the Movie API 👋
 
 Available endpoints:
-  - POST /get       (Add a movie)
-  - GET  /add/{id}  (Fetch a movie by ID)
+  - GET  /get/{id}  (Fetch a movie by ID)
+  - POST /add       (Add a movie entry)
 
-To see it in action, run the included ./api-demo.sh script.
+This script demonstrates successful adds, fetches, and 404 behavior for missing entries.
 "#
             }),
         )
         .with_state(db);
 
-    let addr = env::var("API_BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
+    // Get optional bind endpoint from environment
+    let endpoint = env::var("API_BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
 
-    info!("Server starting on {addr}");
+    info!("Starting Axum Quick-Start API v1.0 server...");
 
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    let listener = tokio::net::TcpListener::bind(&endpoint).await?;
     axum::serve(listener, app).await.map_err(Into::into)
 }
