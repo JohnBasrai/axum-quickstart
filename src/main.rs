@@ -7,8 +7,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, env, sync::Arc};
-
 use tokio::sync::Mutex;
+use tracing::info;
+use tracing_subscriber;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Movie {
@@ -29,33 +30,40 @@ struct GetMovie {
 type DB = Arc<Mutex<HashMap<String, Movie>>>;
 
 // Lookup a movie by ID
+#[tracing::instrument(skip(db, id))]
 async fn get_movie(Path(id): Path<String>, State(db): State<DB>) -> (StatusCode, Json<GetMovie>) {
     // Lock the database mutex for MT access. When db_guard is dropped lock is released
     let db_guard = db.lock().await;
 
     let (status, movie) = if let Some(movie) = db_guard.get(&id) {
-        println!("Movie found! {:?}", &movie);
+        info!("{}/{}", &movie.id, &movie.title);
         (StatusCode::OK, Some(movie.clone()))
     } else {
-        println!("Movie not found for id={id}!");
+        info!("{}/<NOT-FOUND>", &id);
         (StatusCode::NOT_FOUND, None)
     };
     let movie = GetMovie { movie };
     (status, Json(movie))
 }
 
-async fn add_movie(State(db): State<DB>, Json(movie): Json<Movie>) -> (StatusCode, Json<Movie>) {
+#[tracing::instrument(skip(db, movie))]
+async fn add_movie(State(db): State<DB>, Json(movie): Json<Movie>) -> StatusCode {
+    info!("{}/{}", &movie.id, &movie.title);
+
     // Lock the database mutex for MT access. When db_guard is dropped lock is released
     let mut db_guard = db.lock().await;
 
     db_guard.insert(movie.id.clone(), movie.clone());
 
-    println!("Movie added! {:?}", &movie);
-    (axum::http::StatusCode::CREATED, Json(movie))
+    StatusCode::CREATED
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Set up tracing subscriber
+    tracing_subscriber::fmt::init();
+    tracing::info!("Starting axum server...");
+
     let db: DB = Arc::new(Mutex::new(HashMap::new()));
 
     let app = Router::new()
@@ -78,7 +86,7 @@ To see it in action, run the included ./api-demo.sh script.
 
     let addr = env::var("API_BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
 
-    println!("Server starting on {addr}");
+    info!("Server starting on {addr}");
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await.map_err(Into::into)

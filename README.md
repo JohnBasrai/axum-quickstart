@@ -8,6 +8,8 @@ This project demonstrates:
 - Routing with path parameters and JSON bodies using Axum
 - Shared, thread-safe in-memory state with `Arc<Mutex<HashMap<...>>>`
 - Clean async error handling via the `anyhow` crate
+- Structured application logging using tracing and tracing-subscriber
+- Minimal response payloads (e.g., POST /add returns status code only)
 - Read server bind address from `API_BIND_ADDR` environment variable
 - Has friendly root (/) handler with API overview
   - Uses an async closure with a raw string for readability
