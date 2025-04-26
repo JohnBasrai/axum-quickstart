@@ -5,13 +5,13 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use redis::{AsyncCommands, Client};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, env, sync::Arc};
-use tokio::sync::Mutex;
+use std::env;
 use tracing::info;
 use tracing_subscriber;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 struct Movie {
     id: String,
     title: String,
@@ -19,55 +19,94 @@ struct Movie {
     stars: f32,
 }
 
-#[derive(Serialize)]
-struct GetMovie {
-    // Will be None if a Movie is not found under the lookup key.
-    movie: Option<Movie>,
-}
-
-// The movie database is made thread-safe using Arc<Mutex<_>>.
-// Added as a state object (.with_state(db)) which AXUM will pass to each handler.
-// This approach is appropriate for light to moderate write contention.
-// For heavy concurrent writes, consider sharding the database to improve performance.
-type DB = Arc<Mutex<HashMap<String, Movie>>>;
-
 // Lookup a movie by ID, suppress default tracing input parameters
-#[tracing::instrument(skip(db, id))]
-async fn get_movie(Path(id): Path<String>, State(db): State<DB>) -> (StatusCode, Json<GetMovie>) {
-    // Lock the database for safe concurrent access; the lock is released when db_guard is dropped
-    // Note: lock().await is infallible in tokio::sync::Mutex (no poison errors)
-    let db_guard = db.lock().await;
+#[tracing::instrument(skip(state, id))]
+async fn get_movie(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<(StatusCode, Json<Movie>), StatusCode> {
+    let mut conn = state
+        .redis_client
+        .get_multiplexed_async_connection()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let (status, movie) = if let Some(movie) = db_guard.get(&id) {
-        info!("{}/{}", &movie.id, &movie.title);
-        (StatusCode::OK, Some(movie.clone()))
-    } else {
-        info!("{}/<NOT-FOUND>", &id);
-        (StatusCode::NOT_FOUND, None)
+    let fields: Vec<(String, String)> = conn
+        .hgetall(&id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if fields.is_empty() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let map: std::collections::HashMap<String, String> = fields.into_iter().collect();
+    let movie = Movie {
+        id: map.get("id").cloned().unwrap_or_default(),
+        title: map.get("title").cloned().unwrap_or_default(),
+        year: map.get("year").and_then(|y| y.parse().ok()).unwrap_or(0),
+        stars: map.get("stars").and_then(|s| s.parse().ok()).unwrap_or(0.0),
     };
-    let movie = GetMovie { movie };
-    (status, Json(movie))
+
+    Ok((StatusCode::OK, Json(movie)))
 }
 
-#[tracing::instrument(skip(db, movie))]
-async fn add_movie(State(db): State<DB>, Json(movie): Json<Movie>) -> StatusCode {
+#[tracing::instrument(skip(state, movie))]
+async fn add_movie(
+    State(state): State<AppState>,
+    Json(movie): Json<Movie>,
+) -> Result<StatusCode, StatusCode> {
     info!("{}/{}", &movie.id, &movie.title);
 
-    // Lock the database for safe concurrent access; the lock is released when db_guard is dropped
-    let mut db_guard = db.lock().await;
+    // Get redis handle and save the movie record under the key.
+    let mut conn = state
+        .redis_client
+        .get_multiplexed_async_connection()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    db_guard.insert(movie.id.clone(), movie);
+    let _: () = conn
+        .hset_multiple(
+            &movie.id,
+            &[
+                ("id", &movie.id),
+                ("title", &movie.title),
+                ("year", &movie.year.to_string()),
+                ("stars", &movie.stars.to_string()),
+            ],
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    StatusCode::CREATED
+    Ok(StatusCode::CREATED)
+}
+
+/// Shared application state passed to all Axum handlers.
+///
+/// Currently holds a Redis `Client` instance for creating multiplexed
+/// async connections on demand inside each handler.
+///
+/// This design allows each request to create an independent
+/// connection safely while sharing the underlying Redis configuration.
+///
+/// Additional shared resources (e.g., configuration, database pools)
+/// can be added to this struct in the future as needed.
+#[derive(Clone)]
+struct AppState {
+    redis_client: Client,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing subscriber to log to stdout (can be customized to log to a file or other formats)
+    // Initialize tracing subscriber to log to stdout
     tracing_subscriber::fmt::init();
     tracing::info!("Starting axum server...");
 
-    let db: DB = Arc::new(Mutex::new(HashMap::new()));
+    // Get REDIS_URL from environment, or fallback to localhost.
+    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+
+    // Create a Redis client. Multiplexed connections will be created on demand.
+    let redis_client = Client::open(redis_url)?;
 
     let app = Router::new()
         .route("/get/{id}", get(get_movie))
@@ -85,7 +124,7 @@ This script demonstrates successful adds, fetches, and 404 behavior for missing 
 "#
             }),
         )
-        .with_state(db);
+        .with_state(AppState { redis_client });
 
     // Get optional bind endpoint from environment
     let endpoint = env::var("API_BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
@@ -94,5 +133,7 @@ This script demonstrates successful adds, fetches, and 404 behavior for missing 
     info!("Starting Axum Quick-Start API server v{}...", env!("CARGO_PKG_VERSION"));
 
     let listener = tokio::net::TcpListener::bind(&endpoint).await?;
-    axum::serve(listener, app).await.map_err(Into::into)
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }
