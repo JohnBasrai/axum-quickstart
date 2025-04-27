@@ -1,5 +1,27 @@
 #!/usr/bin/env python3
 
+"""
+api-test.py - Integration tests for Movie API
+
+This script will:
+
+| Step                   | HTTP Verb | Endpoint                     |
+|------------------------|-----------|------------------------------|
+| Add movie              | POST      | /movies/add                  |
+| Fetch movie            | GET       | /movies/get/{id}             |
+| Update movie           | PUT       | /movies/update/{id}          |
+| Fetch updated movie    | GET       | /movies/get/{id}             |
+| Delete movie           | DELETE    | /movies/delete/{id}          |
+| Fetch deleted movie    | GET       | /movies/get/{id} (expect 404)|
+| Fetch nonexistent movie| GET       | /movies/get/nonexistent123 (expect 404) |
+
+Notes:
+- Verifies successful adds, updates, deletions.
+- Confirms 404 behavior for missing or deleted entries.
+- Exits early with ❌ if any test fails.
+- Pretty prints fetched movie data.
+"""
+
 import requests
 import sys
 import json
@@ -30,13 +52,13 @@ def main():
 
     # 1. Add movie
     print(f"🔵 Adding movie ID {movie_id}...")
-    response = requests.post(f"{BASE_URL}/add", json=movie_payload)
-    assert_status(response, 201, "Add movie (POST /add)")
+    response = requests.post(f"{BASE_URL}/movies/add", json=movie_payload)
+    assert_status(response, 201, "Add movie (POST /movies/add)")
 
     # 2. Fetch movie
     print("🔵 Fetching movie...")
-    response = requests.get(f"{BASE_URL}/get/{movie_id}")
-    assert_status(response, 200, "Fetch movie (GET /get/{id})")
+    response = requests.get(f"{BASE_URL}/movies/get/" + movie_id)
+    assert_status(response, 200, "Fetch movie (GET /movies/get/{id})")
     pretty_print(response)
 
     # 3. Update movie
@@ -47,20 +69,30 @@ def main():
         "stars": 4.8
     }
     print("🔵 Updating movie...")
-    response = requests.put(f"{BASE_URL}/update/{movie_id}", json=updated_payload)
-    assert_status(response, 200, "Update movie (PUT /update/{id})")
+    response = requests.put(f"{BASE_URL}/movies/update/" + movie_id, json=updated_payload)
+    assert_status(response, 200, "Update movie (PUT /movies/update/{id})")
 
     # 4. Fetch updated movie
     print("🔵 Fetching updated movie...")
-    response = requests.get(f"{BASE_URL}/get/{movie_id}")
-    assert_status(response, 200, "Fetch updated movie (GET /get/{id})")
+    response = requests.get(f"{BASE_URL}/movies/get/" + movie_id)
+    assert_status(response, 200, "Fetch updated movie (GET /movies/get/{id})")
     pretty_print(response)
 
-    # 5. Fetch a non-existent movie
+    # 5. Delete movie
+    print("🔵 Deleting movie...")
+    response = requests.delete(f"{BASE_URL}/movies/delete/" + movie_id)
+    assert_status(response, 204, "Delete movie (DELETE /movies/delete/{id})")
+
+    # 6. Fetch deleted movie (should be 404)
+    print("🔵 Fetching deleted movie (should 404)...")
+    response = requests.get(f"{BASE_URL}/movies/get/" + movie_id)
+    assert_status(response, 404, "Fetch deleted movie (GET /movies/get/{id})")
+
+    # 7. Fetch a truly non-existent movie
     fake_id = "nonexistent123"
     print("🔵 Fetching non-existent movie...")
-    response = requests.get(f"{BASE_URL}/get/{fake_id}")
-    assert_status(response, 404, "Fetch non-existent movie (GET /get/{id})")
+    response = requests.get(f"{BASE_URL}/movies/get/" + fake_id)
+    assert_status(response, 404, "Fetch non-existent movie (GET /movies/get/{id})")
 
     print("\n🎉 All tests passed successfully!")
 

@@ -2,7 +2,7 @@ use anyhow::Result;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{get, post, put},
+    routing::{get, delete, post, put},
     Json, Router,
 };
 use redis::{AsyncCommands, Client};
@@ -150,6 +150,38 @@ async fn update_movie(
     save_movie(&mut conn, &id, &updated_movie, true).await
 }
 
+/// Delete a movie from the Redis database by its ID.
+///
+/// Returns:
+/// - `204 No Content` if the movie was successfully deleted.
+/// - `404 Not Found` if no movie exists with the given ID.
+/// - `500 Internal Server Error` if there is a Redis connection or command failure.
+///
+/// # Arguments
+/// - `State(state)`: The application state, providing a Redis connection.
+/// - `Path(id)`: The ID of the movie to delete.
+///
+/// # Errors
+/// Returns a `StatusCode` error on failure, following the rules above.
+async fn delete_movie(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    // ---
+    let mut conn = state.get_conn().await?;
+
+    let deleted: u64 = conn
+        .del(&id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if deleted == 0 {
+        Err(StatusCode::NOT_FOUND)
+    } else {
+        Ok(StatusCode::NO_CONTENT)
+    }
+}
+
 /// Shared application state passed to all Axum handlers.
 ///
 /// Currently holds a Redis `Client` instance for creating multiplexed
@@ -217,9 +249,11 @@ async fn main() -> Result<()> {
     let redis_client = Client::open(redis_url)?;
 
     let app = Router::new()
-        .route("/get/{id}", get(get_movie))
-        .route("/add", post(add_movie))
-        .route("/update/{id}", put(update_movie))
+        .nest("/movies", Router::new()
+              .route("/get/{id}", get(get_movie))
+              .route("/add", post(add_movie))
+              .route("/update/{id}", put(update_movie))
+              .route("/delete/{id}", delete(delete_movie)))
         .route(
             "/",
             get(|| async {
