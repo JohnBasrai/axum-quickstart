@@ -12,7 +12,6 @@ This project demonstrates:
 - Minimal response payloads (e.g., POST /movies/add returns status code only)
 - Read server bind address from `API_BIND_ADDR` environment variable
 - Friendly root (`/`) handler with API overview
-  - Uses an async closure with a raw string for readability
   - Lists available endpoints and their purpose
   - Improves first impression by avoiding a 404 on /
 
