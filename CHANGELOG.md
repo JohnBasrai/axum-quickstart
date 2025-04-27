@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.0.0] - 2025-04-27
+
+### Added
+- Migrated backend storage from in-memory `HashMap` to persistent Redis database
+- Introduced `/movies` namespace for all movie-related routes:
+```
+     POST    /movies/add         — Add a movie
+     GET     /movies/get/{id}    — Fetch a movie by ID
+     PUT     /movies/update/{id} — Update a movie by ID
+     DELETE  /movies/delete/{id} — Delete a movie by ID
+```
+- Implemented `DELETE` endpoint for removing movie entries
+- Added automatic version logging using `env!("CARGO_PKG_VERSION")`
+- Extended integration test coverage via `api-test.py`:
+  - Test add, fetch, update, delete, and 404-not-found behavior
+- Added detailed handler tracing spans with optional event control via environment variable
+
+### Changed
+- Refactored application to use `AppState` for Redis connection management
+- Updated integration testing from manual shell script (`api-demo.sh`) to Python script (`api-test.py`)
+- Improved error handling for Redis operations (graceful mapping to appropriate HTTP status codes)
+- Standardized API route structure for consistency and future expansion
+
+### Removed
+- Deprecated old `Arc<Mutex<HashMap<String, Movie>>>` memory database
+- Removed `api-demo.sh` shell script in favor of Python-based testing
+
+---
+
 ## [0.1.0] - 2025-04-26
 
 ### Added
