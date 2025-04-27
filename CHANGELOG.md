@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.0] - 2025-04-27
+
+### Added
+- Add `GET /health` endpoint for server and Redis liveness checks
+- Support optional `mode=light` (default) or `mode=full` (Redis ping) via query parameter
+- Extend `api-test.py` to validate health checks (no params, mode=full, mode=light)
+
+### Changed
+- Modularize handlers: split movies, health, and shared_types into separate modules
+- Improve server startup logging: include version and bind address at launch
+
+## [1.0.1] - 2025-04-27
+
+### Changed
+- Update README.md to reflect `/movies` API namespace restructure
+- Document all CRUD operations (POST, GET, PUT, DELETE) under `/movies`
+- Update usage instructions to refer to `api-test.py` instead of `api-demo.sh`
+
 ## [1.0.0] - 2025-04-27
 
 ### Added
