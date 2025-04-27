@@ -6,6 +6,7 @@
 - Add `GET /health` endpoint for server and Redis liveness checks
 - Support optional `mode=light` (default) or `mode=full` (Redis ping) via query parameter
 - Extend `api-test.py` to validate health checks (no params, mode=full, mode=light)
+- Added graceful shutdown support for `Ctrl+C` and `SIGTERM` signals.
 
 ### Changed
 - Modularize handlers: split movies, health, and shared_types into separate modules

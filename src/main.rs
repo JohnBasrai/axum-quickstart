@@ -8,6 +8,7 @@ mod handlers;
 
 use handlers::movies::*;
 use handlers::health::health_check;
+use handlers::root::root_handler;
 
 /// Shared application state passed to all Axum handlers.
 ///
@@ -76,26 +77,13 @@ async fn main() -> Result<()> {
     let redis_client = Client::open(redis_url)?;
 
     let app = Router::new()
+        .route("/",get(root_handler))
         .route("/health", get(health_check))
         .nest("/movies", Router::new()
               .route("/get/{id}", get(get_movie))
               .route("/add", post(add_movie))
               .route("/update/{id}", put(update_movie))
-              .route("/delete/{id}", delete(delete_movie)))
-        .route(
-            "/",
-            get(|| async {
-                r#"Welcome to the Movie API 👋
-
-Available endpoints:
-  - GET    /movies/get/{id} - Fetch a movie by ID
-  - POST   /movies/add      - Add a movie entry
-  - PUT    /movies/update   - Update a movie entry by id
-  - DELETE /movies/delete   - Delete a movie entry by id
-
-This script demonstrates successful adds, fetches, updates, deletes, and 404 behavior for missing entries.
-"#
-            }),
+              .route("/delete/{id}", delete(delete_movie))
         )
         .with_state(AppState { redis_client });
 
@@ -106,7 +94,31 @@ This script demonstrates successful adds, fetches, updates, deletes, and 404 beh
     info!("Starting Axum Quick-Start API server v{}...", env!("CARGO_PKG_VERSION"));
 
     let listener = tokio::net::TcpListener::bind(&endpoint).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    use tokio::signal::unix::{signal, SignalKind};
+    use tokio::signal::ctrl_c;
+    use futures::future;
+
+    // Create a future that resolves on Ctrl+C
+    let ctrl_c = async {
+        ctrl_c().await.expect("failed to install Ctrl+C handler");
+    };
+
+    // Create a future that resolves on SIGTERM
+    let sigterm = async {
+        let mut sigterm = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+        sigterm.recv().await;
+    };
+
+    // Wait for either to complete
+    future::select(Box::pin(ctrl_c), Box::pin(sigterm)).await;
+
+    tracing::info!("Shutdown signal received. Closing server gracefully...");
 }
