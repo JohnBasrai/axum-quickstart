@@ -8,6 +8,7 @@ mod handlers;
 
 use handlers::movies::*;
 use handlers::health::health_check;
+use handlers::root::root_handler;
 
 /// Shared application state passed to all Axum handlers.
 ///
@@ -77,26 +78,12 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/health", get(health_check))
+        .route("/", get(root_handler))
         .nest("/movies", Router::new()
               .route("/get/{id}", get(get_movie))
               .route("/add", post(add_movie))
               .route("/update/{id}", put(update_movie))
               .route("/delete/{id}", delete(delete_movie)))
-        .route(
-            "/",
-            get(|| async {
-                r#"Welcome to the Movie API 👋
-
-Available endpoints:
-  - GET    /movies/get/{id} - Fetch a movie by ID
-  - POST   /movies/add      - Add a movie entry
-  - PUT    /movies/update   - Update a movie entry by id
-  - DELETE /movies/delete   - Delete a movie entry by id
-
-This script demonstrates successful adds, fetches, updates, deletes, and 404 behavior for missing entries.
-"#
-            }),
-        )
         .with_state(AppState { redis_client });
 
     // Get optional bind endpoint from environment
