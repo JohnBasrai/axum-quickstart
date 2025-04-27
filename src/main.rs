@@ -260,10 +260,12 @@ async fn main() -> Result<()> {
                 r#"Welcome to the Movie API 👋
 
 Available endpoints:
-  - GET  /get/{id}  (Fetch a movie by ID)
-  - POST /add       (Add a movie entry)
+  - GET    /movies/get/{id} - Fetch a movie by ID
+  - POST   /movies/add      - Add a movie entry
+  - PUT    /movies/update   - Update a movie entry by id
+  - DELETE /movies/delete   - Delete a movie entry by id
 
-This script demonstrates successful adds, fetches, and 404 behavior for missing entries.
+This script demonstrates successful adds, fetches, updates, deletes, and 404 behavior for missing entries.
 "#
             }),
         )
