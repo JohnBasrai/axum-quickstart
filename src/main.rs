@@ -90,7 +90,8 @@ This script demonstrates successful adds, fetches, and 404 behavior for missing 
     // Get optional bind endpoint from environment
     let endpoint = env::var("API_BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
 
-    info!("Starting Axum Quick-Start API v1.0 server...");
+    info!("Starting at endpoint:{}", endpoint);
+    info!("Starting Axum Quick-Start API server v{}...", env!("CARGO_PKG_VERSION"));
 
     let listener = tokio::net::TcpListener::bind(&endpoint).await?;
     axum::serve(listener, app).await.map_err(Into::into)
