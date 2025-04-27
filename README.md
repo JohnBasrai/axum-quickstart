@@ -30,6 +30,7 @@ Then visit: [http://localhost:8080](http://localhost:8080)
 
 ## Endpoints
 
+---
 ### `POST /movies/add`
 
 - Adds a new movie to the database.
@@ -45,6 +46,7 @@ curl -X POST http://localhost:8080/movies/add   -H "Content-Type: application/js
       }'
 ```
 
+---
 ### `GET /movies/get/{id}`
 
 - Fetches the movie with the given `id`.
@@ -55,6 +57,7 @@ curl -X POST http://localhost:8080/movies/add   -H "Content-Type: application/js
 curl http://localhost:8080/movies/get/t1994Qw22
 ```
 
+---
 ### `PUT /movies/update/{id}`
 
 - Updates an existing movie by `id`.
@@ -70,6 +73,7 @@ curl -X PUT http://localhost:8080/movies/update/t1994Qw22   -H "Content-Type: ap
       }'
 ```
 
+---
 ### `DELETE /movies/delete/{id}`
 
 - Deletes a movie from the database by `id`.
@@ -79,6 +83,24 @@ curl -X PUT http://localhost:8080/movies/update/t1994Qw22   -H "Content-Type: ap
 curl -X DELETE http://localhost:8080/movies/delete/t1994Qw22
 ```
 
+---
+### `GET /health`
+
+- Checks if the server (and optionally the Redis backend) are healthy.
+- Optional query parameter `mode`:
+  - `mode=light` (default) — basic server liveness check (server responding)
+  - `mode=full` — ping Redis backend to ensure database connectivity
+
+**Examples:**
+```bash
+# Basic liveness check
+curl http://localhost:8080/health
+
+# Full health check (including Redis)
+curl http://localhost:8080/health?mode=full
+```
+
+---
 ## Testing the API
 
 See [`api-test.py`](./api-test.py) for a detailed usage example.

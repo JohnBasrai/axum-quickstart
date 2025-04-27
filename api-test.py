@@ -5,16 +5,19 @@ api-test.py - Integration tests for Movie API
 
 This script will:
 
-| Step                   | HTTP Verb | Endpoint                     |
-|------------------------|-----------|------------------------------|
-| Add movie              | POST      | /movies/add                  |
-| Fetch movie            | GET       | /movies/get/{id}             |
-| Update movie           | PUT       | /movies/update/{id}          |
-| Fetch updated movie    | GET       | /movies/get/{id}             |
-| Delete movie           | DELETE    | /movies/delete/{id}          |
-| Fetch deleted movie    | GET       | /movies/get/{id} (expect 404)|
-| Fetch nonexistent movie| GET       | /movies/get/nonexistent123 (expect 404) |
-
+| Step                      | HTTP Verb | Endpoint                     |
+|---------------------------|-----------|------------------------------|
+| Add movie                 | POST      | /movies/add                  |
+| Fetch movie               | GET       | /movies/get/{id}             |
+| Update movie              | PUT       | /movies/update/{id}          |
+| Fetch updated movie       | GET       | /movies/get/{id}             |
+| Delete movie              | DELETE    | /movies/delete/{id}          |
+| Fetch deleted movie       | GET       | /movies/get/{id} (expect 404)|
+| Fetch nonexistent movie   | GET       | /movies/get/nonexistent123 (expect 404) |
+| Health check (no params)  | GET       | /health                      |
+| Health check (mode=full)  | GET       | /health?mode=full            |
+| Health check (mode=light) | GET       | /health?mode=light           |
+ 
 Notes:
 - Verifies successful adds, updates, deletions.
 - Confirms 404 behavior for missing or deleted entries.
@@ -40,6 +43,28 @@ def assert_status(response, expected_status, description=""):
         sys.exit(1)
     else:
         print(f"✅ PASS: {description}")
+
+verbose = False
+
+def test_health_checks():
+    # 1. Light check (no params)
+    print("\n -- Checking health endpoint (light, no params)...")
+    response = requests.get(f"{BASE_URL}/health")
+    assert_status(response, 200, "Health check (no params)")
+    if verbose: pretty_print(response)
+
+    # 2. Full check (ping Redis)
+    print("\n -- Checking health endpoint (mode=full)...")
+    response = requests.get(f"{BASE_URL}/health?mode=full")
+    assert_status(response, 200, "Health check (mode=full)")
+    if verbose: pretty_print(response)
+
+    # 3. Explicit light check
+    print("\n -- Checking health endpoint (mode=light)...")
+    response = requests.get(f"{BASE_URL}/health?mode=light")
+    assert_status(response, 200, "Health check (mode=light)")
+    if verbose: pretty_print(response)
+
 
 def main():
     movie_id = f"t{uuid.uuid4().hex[:8]}"  # generate a random ID
@@ -93,7 +118,7 @@ def main():
     response = requests.get(f"{BASE_URL}/movies/get/" + fake_id)
     assert_status(response, 404, "Fetch non-existent movie (GET /movies/get/{id})")
 
-    print("\n🎉 All tests passed successfully!")
-
 if __name__ == "__main__":
+    test_health_checks()
     main()
+    print("\n🎉 All tests passed successfully!")
