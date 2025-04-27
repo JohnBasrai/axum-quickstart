@@ -6,12 +6,12 @@ This project demonstrates:
 
 - Defining data structures with `serde` for (de)serialization
 - Routing with path parameters and JSON bodies using Axum
-- Shared, thread-safe in-memory state with `Arc<Mutex<HashMap<...>>>`
+- Persistent Redis database backend with multiplexed async connections
 - Clean async error handling via the `anyhow` crate
 - Structured application logging using tracing and tracing-subscriber
-- Minimal response payloads (e.g., POST /add returns status code only)
+- Minimal response payloads (e.g., POST /movies/add returns status code only)
 - Read server bind address from `API_BIND_ADDR` environment variable
-- Has friendly root (/) handler with API overview
+- Friendly root (`/`) handler with API overview
   - Uses an async closure with a raw string for readability
   - Lists available endpoints and their purpose
   - Improves first impression by avoiding a 404 on /
@@ -30,45 +30,72 @@ Then visit: [http://localhost:8080](http://localhost:8080)
 
 ## Endpoints
 
-### `GET /get/{id}`
+### `POST /movies/add`
 
-- Gets the movie with the given `id`.
-- Returns the movie data as JSON if found, or an empty object with a 404 status if not.
+- Adds a new movie to the database.
+- Expects a JSON body with fields: `id`, `title`, `year`, `stars`.
 
 **Example:**
 ```bash
-curl http://localhost:8080/get/t1994Qw22
-```
-
-### `POST /add`
-
-Add a movie to the in-memory database.
-
-**Quick test with curl:**
-```bash
-curl -X POST http://localhost:8080/add   -H "Content-Type: application/json"   -d '{
+curl -X POST http://localhost:8080/movies/add   -H "Content-Type: application/json"   -d '{
         "id": "t1994Qw22",
         "title": "The Shawshank Redemption",
         "year": 1994,
-        "stars": 3.5
+        "stars": 4.5
       }'
 ```
 
-## For a more complete usage demo
+### `GET /movies/get/{id}`
 
-Also check out the [`api-demo.sh`](./api-demo.sh) script for a more detailed usage example.
+- Fetches the movie with the given `id`.
+- Returns the movie data as JSON if found, or a 404 if not.
+
+**Example:**
+```bash
+curl http://localhost:8080/movies/get/t1994Qw22
+```
+
+### `PUT /movies/update/{id}`
+
+- Updates an existing movie by `id`.
+- Expects a JSON body with new values for `title`, `year`, `stars`.
+
+**Example:**
+```bash
+curl -X PUT http://localhost:8080/movies/update/t1994Qw22   -H "Content-Type: application/json"   -d '{
+        "id": "t1994Qw22",
+        "title": "The Shawshank Redemption (Director's Cut)",
+        "year": 1994,
+        "stars": 4.8
+      }'
+```
+
+### `DELETE /movies/delete/{id}`
+
+- Deletes a movie from the database by `id`.
+
+**Example:**
+```bash
+curl -X DELETE http://localhost:8080/movies/delete/t1994Qw22
+```
+
+## Testing the API
+
+See [`api-test.py`](./api-test.py) for a detailed usage example.
 
 This script:
 
-- Adds a sample movie with a unique ID
-- Fetches the same movie using its ID
-- Attempts to fetch a non-existent movie (to demonstrate 404 handling)
+- Adds a sample movie with a random ID
+- Fetches the added movie
+- Updates the movie
+- Fetches it again to verify the update
+- Deletes the movie
+- Attempts to fetch it again (should return 404)
 
 Run it with:
 
 ```bash
-./api-demo.sh
-./api-demo.sh --verbose
+python3 api-test.py
 ```
 
 ## License
