@@ -2,7 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+and [Semantic Versioning](https://semver.org/).
+
 ## [Unreleased]
+
+## [1.1.2] — 2025-04-28
+
+### Added
+- Moved Python-based `api-test.py` to `scripts/` folder and marked it as deprecated.
+- Added full Rust-based integration tests under `tests/` using `reqwest` and `cargo test`.
+- Implemented `spawn_app!` macro to simplify test setup and reduce duplication.
+- Updated `README.md` to reflect new integration test workflow (`cargo test`) and removed
+  outdated Full API Usage section.
+
+### Fixed
+- Corrected handling of validation error codes: missing fields now return
+  `422 Unprocessable Entity`, and invalid business logic inputs (stars, year) return
+  `400 Bad Request`.
+
+### Changed
+- Deprecated old external manual testing via `api-test.py` in favor of Rust-native
+  integration tests.
 
 ## [1.1.1] — 2025-04-28
 
