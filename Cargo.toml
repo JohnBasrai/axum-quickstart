@@ -2,7 +2,7 @@
 name = "axum-quickstart"
 version = "1.1.1"
 edition = "2021"
-authors = ["John Basrai"]
+authors = ["John Basrai <john@basrai.dev>"]
 description = "Axum Quick-Start API with Redis backend, full CRUD, and integration tests."
 license = "MIT"
 readme = "README.md"
@@ -18,9 +18,13 @@ futures = "0"
 hex = "0.4.3"
 redis = { version = "0.30", features = ["aio","tokio-comp"] }
 regex = "1.11.1"
+reqwest = { version = "0", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.140"
 sha1 = "0.10.6"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "net", "signal"] }
 tracing = "0"
 tracing-subscriber = "0"
+
+[dev-dependencies]
+rand = "0.8"

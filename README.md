@@ -1,67 +1,72 @@
-# Axum Quick-Start: Movie API
+# Axum Quickstart Project
 
-A simple, self-contained web API using the [Axum](https://crates.io/crates/axum) framework in Rust.
+## Overview
 
-This project demonstrates:
+This project is a quickstart template for building a simple RESTful API using Axum in Rust. It includes:
 
-- Defining data structures with `serde` for (de)serialization
-- Routing with path parameters and JSON bodies using Axum
-- Persistent Redis database backend with multiplexed async connections
-- Clean async error handling via the `anyhow` crate
-- Structured application logging using tracing and tracing-subscriber
-- Minimal and structured response payloads (`POST /movies/add` returns `201 Created` with generated ID in JSON)
-- Read server bind address from `API_BIND_ADDR` environment variable
-- Friendly root (`/`) handler with API overview
-  - Lists available endpoints and their purpose
-  - Improves first impression by avoiding a 404 on /
-
-## Running the Server
-
-By default, the server runs on `127.0.0.1:8080`. You can override this
-by setting the `API_BIND_ADDR` environment variable:
-
-```bash
-API_BIND_ADDR=0.0.0.0:8080 cargo run
-```
-
-Then visit: [http://localhost:8080](http://localhost:8080)
+- Basic CRUD endpoints for managing movies.
+- Redis backend for persistent storage.
+- Full HTTP integration testing using reqwest.
+- Clean project structure with separation of concerns.
 
 ---
 
-## Quick Example
+## Running the Application
 
-**Add a Movie:**
+Make sure you have a Redis server running locally.
 
-```bash
-curl -X POST http://localhost:8080/movies/add \
-     -H "Content-Type: application/json" \
-     -d '{ "title": "The Shawshank Redemption", "year": 1994, "stars": 4.5 }'
-```
+You can quickly start Redis using Docker:
 
-The server will generate an ID based on the title and year, and return it in the response body:
-```json
-{ "id": "<generated_id>" }
-```
+    docker run --name test-redis -p 6379:6379 -d redis
 
-If a movie with the same title and year already exists, the server will return `409 Conflict`.
+Then start the server:
+
+    cargo run
+
+The application will be available at http://localhost:8080.
 
 ---
 
-## Full API Usage
+## Running Tests
 
-For detailed examples covering:
+Integration tests are written in Rust and use real HTTP requests via reqwest.
 
-- Adding a movie
-- Fetching a movie
-- Updating a movie
-- Deleting a movie
-- Handling duplicate movies
-- Health checks
+To run the tests:
 
-see [`api-test.py`](./api-test.py).
+1. **Start a Redis server locally**
+
+   If not already running:
+
+       docker run --name test-redis -p 6379:6379 -d redis
+
+2. **Run all tests**
+
+       cargo test
+
+This will run:
+
+- Unit tests inside src/
+- Full HTTP-based integration tests inside tests/
+
+Each integration test spins up its own isolated Axum server instance and binds to a random port, allowing tests to run concurrently without conflict.
+
+> Note: The old Python-based scripts/api-test.py is deprecated and no longer maintained. All testing is now handled natively in Rust.
+
+---
+
+## Project Structure
+
+    src/
+      lib.rs         # Application setup (create_app)
+      main.rs        # Server startup entry point
+      handlers/      # Route handlers (movies, health, etc.)
+    tests/
+      integration.rs # Full end-to-end integration tests
+    scripts/
+      api-test.py    # (Deprecated) Old manual Python API test script
 
 ---
 
 ## License
 
-MIT
+This project is licensed under the MIT License.

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# DEPRECATED: This script is no longer maintained.
+# All integration testing is now done via Rust tests in tests/integration.rs.
 
 """
 api-test.py - Integration tests for Movie API

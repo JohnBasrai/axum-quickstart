@@ -1,50 +1,7 @@
 use anyhow::Result;
-use axum::{
-    http::StatusCode,
-    routing::{delete, get, post, put},
-    Router,
-};
-use redis::Client;
+use axum_quickstart::create_app; // <-- this will now work
 use std::env;
-use tracing::{error, info, Level};
-
-mod handlers;
-
-use handlers::health::health_check;
-use handlers::movies::*;
-use handlers::root::root_handler;
-
-/// Shared application state passed to all Axum handlers.
-///
-/// Currently holds a Redis `Client` instance for creating multiplexed
-/// async connections on demand inside each handler.
-///
-/// This design allows each request to create an independent
-/// connection safely while sharing the underlying Redis configuration.
-///
-/// Additional shared resources (e.g., configuration, database pools)
-/// can be added to this struct in the future as needed.
-#[derive(Clone)]
-struct AppState {
-    redis_client: Client,
-}
-
-impl AppState {
-    // ---
-    /// Creates a new multiplexed Redis connection.
-    ///
-    /// Logs an error if connection fails and returns HTTP 500.
-    pub async fn get_conn(&self) -> Result<redis::aio::MultiplexedConnection, StatusCode> {
-        // ---
-        self.redis_client
-            .get_multiplexed_async_connection()
-            .await
-            .map_err(|err| {
-                error!("Failed to connect to Redis: {:?}", err);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })
-    }
-}
+use tracing::{info, Level};
 
 use tracing_subscriber::fmt::format::FmtSpan;
 
@@ -85,24 +42,7 @@ async fn main() -> Result<()> {
 
     tracing::info!("Starting axum server...");
 
-    // Get REDIS_URL from environment, or fallback to localhost.
-    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-
-    // Create a Redis client. Multiplexed connections will be created on demand.
-    let redis_client = Client::open(redis_url)?;
-
-    let app = Router::new()
-        .route("/", get(root_handler))
-        .route("/health", get(health_check))
-        .nest(
-            "/movies",
-            Router::new()
-                .route("/get/{id}", get(get_movie))
-                .route("/add", post(add_movie))
-                .route("/update/{id}", put(update_movie))
-                .route("/delete/{id}", delete(delete_movie)),
-        )
-        .with_state(AppState { redis_client });
+    let app = create_app()?;
 
     // Get optional bind endpoint from environment
     let endpoint = env::var("API_BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
