@@ -1,5 +1,5 @@
-use serde::Serialize;
 use axum::response::{IntoResponse, Response};
+use serde::Serialize;
 
 /// Wrapper type for successful API responses.
 ///
@@ -17,5 +17,3 @@ where
         axum::Json(self).into_response()
     }
 }
-
-

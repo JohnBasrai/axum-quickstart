@@ -1,19 +1,65 @@
-use axum::{
-    Json,
-    extract::{Path, State},
-    http::StatusCode
-};
 use crate::handlers::shared_types::ApiResponse;
-use redis::AsyncCommands;
-use serde::{Deserialize, Serialize};
 use crate::AppState;
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
+use chrono::{Datelike, Utc};
+use redis::AsyncCommands;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Movie {
-    id: String,
     title: String,
     year: u16,
     stars: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct HashKey {
+    pub value: String,
+}
+
+impl Movie {
+    // ---
+    /// Sanitizes the Movie instance by trimming whitespace,
+    /// collapsing multiple spaces, validating fields, and generating
+    /// a HashKey based on normalized title and year.
+    pub fn sanitize(&mut self) -> Result<HashKey, StatusCode> {
+        // ---
+        let re = Regex::new(r"\s+").unwrap();
+
+        // Trim leading/trailing and collapse internal spaces
+        let trimmed = self.title.trim();
+        let squeezed = re.replace_all(trimmed, " ");
+        self.title = squeezed.to_string();
+
+        // Validation
+        if self.title.is_empty() {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        let current_year = Utc::now().year() as u16;
+        if self.year < 1880 || self.year > current_year + 5 {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        if !(0.0..=5.0).contains(&self.stars) {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+
+        // Now generate the lookup key
+        let combined = format!("{}:{}", self.title.to_lowercase(), self.year);
+        let mut hasher = Sha1::new();
+        hasher.update(combined.as_bytes());
+        let result = hasher.finalize();
+        let key = hex::encode(result);
+
+        Ok(HashKey { value: key })
+    }
 }
 
 /// Handler for fetching a movie entry by ID (GET /get/{id}).
@@ -29,25 +75,33 @@ pub async fn get_movie(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<(StatusCode, ApiResponse<Movie>), StatusCode> {
-    // ---
     let mut conn = state.get_conn().await?;
 
-    let fields: Vec<(String, String)> = conn
-        .hgetall(&id)
+    tracing::debug!("get movie: {id}");
+
+    let result: Option<String> = conn
+        .get(&id)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            tracing::info!("Got internal server error: {:?}", &err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
-    if fields.is_empty() {
-        return Err(StatusCode::NOT_FOUND);
-    }
-
-    let map: std::collections::HashMap<String, String> = fields.into_iter().collect();
-    let movie = Movie {
-        id: map.get("id").cloned().unwrap_or_default(),
-        title: map.get("title").cloned().unwrap_or_default(),
-        year: map.get("year").and_then(|y| y.parse().ok()).unwrap_or(0),
-        stars: map.get("stars").and_then(|s| s.parse().ok()).unwrap_or(0.0),
+    let json_string = match result {
+        Some(val) => val,
+        None => {
+            tracing::trace!("Movie not found: {id}");
+            return Err(StatusCode::NOT_FOUND);
+        }
     };
+
+    let movie: Movie = serde_json::from_str(&json_string)
+        .map_err(|err| {
+            tracing::info!("Error parsing JSON: {:?}", &err);
+            StatusCode::BAD_REQUEST
+        })?;
+
+    tracing::trace!("Movie return: {}/{:?}", &id, &movie);
 
     Ok((StatusCode::OK, ApiResponse { data: movie }))
 }
@@ -59,34 +113,49 @@ async fn save_movie(
     allow_overwrite: bool,
 ) -> Result<StatusCode, StatusCode> {
     // ---
+    tracing::trace!("save_movie {}/{:?}", &movie_id, &movie);
+
     if !allow_overwrite {
         let exists: bool = conn
             .exists(movie_id)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(|err| {
+                tracing::info!("Got internal server error (1): {:?}", &err);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
         if exists {
+            tracing::trace!("Conflict");
             return Err(StatusCode::CONFLICT);
         }
     }
 
+    let movie_json = serde_json::to_string(movie).map_err(|err| {
+        tracing::info!("Serialization error: {:?}", &err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    tracing::trace!("Writing movie: {:?}", &movie_json);
+
     let _: () = conn
-        .hset_multiple(
-            movie_id,
-            &[
-                ("id", &movie.id),
-                ("title", &movie.title),
-                ("year", &movie.year.to_string()),
-                ("stars", &movie.stars.to_string()),
-            ],
-        )
+        .set(movie_id, movie_json)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            tracing::info!("Got internal server error (2): {:?}", &err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    tracing::warn!("save movie OK");
 
     if allow_overwrite {
         Ok(StatusCode::OK)
     } else {
         Ok(StatusCode::CREATED)
     }
+}
+
+// Response for add_movie
+#[derive(Serialize)]
+pub struct CreatedResponse {
+    id: String,
 }
 
 /// Handler for creating a new movie entry (POST /add).
@@ -100,12 +169,57 @@ async fn save_movie(
 #[tracing::instrument(skip(state, movie))]
 pub async fn add_movie(
     State(state): State<AppState>,
-    Json(movie): Json<Movie>,
-) -> Result<StatusCode, StatusCode> {
+    Json(mut movie): Json<Movie>,
+) -> Result<(StatusCode, Json<CreatedResponse>), StatusCode> {
     // ---
-    let mut conn = state.get_conn().await?;
+    // Sanitize the movie and get a hash key for it
+    let hash_key = movie.sanitize()?;
 
-    save_movie(&mut conn, &movie.id, &movie, false).await
+    let mut conn = state
+        .get_conn()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let redis_key = hash_key.value;
+
+    // Create a span with movie details for tracing
+    let span = tracing::info_span!(
+        "add_movie",
+        title = %movie.title,
+        year = movie.year,
+        key = %redis_key
+    );
+    let _enter = span.enter();
+
+    // Check if movie already exists
+    if redis::cmd("EXISTS")
+        .arg(&redis_key)
+        .query_async::<i32>(&mut conn)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        != 0
+    {
+        tracing::debug!("Duplicate detected: {}", &redis_key);
+        return Err(StatusCode::CONFLICT);
+    }
+
+    tracing::debug!("Inserting new movie, key:{redis_key}");
+
+    // Insert new movie
+    let serialized = serde_json::to_string(&movie)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    redis::cmd("SET")
+        .arg(&redis_key)
+        .arg(&serialized)
+        .query_async::<()>(&mut conn)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(CreatedResponse { id: redis_key }),
+    ))
 }
 
 /// Handler for updating an existing movie entry (PUT /update/{id}).
@@ -116,16 +230,16 @@ pub async fn add_movie(
 /// - Responds with `200 OK` regardless of whether the movie previously existed.
 ///
 /// This endpoint allows overwriting or creating movies freely.
-#[tracing::instrument(skip(state, updated_movie))]
+#[tracing::instrument(skip(state, movie))]
 pub async fn update_movie(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(updated_movie): Json<Movie>,
+    Json(mut movie): Json<Movie>,
 ) -> Result<StatusCode, StatusCode> {
     // ---
+    movie.sanitize()?;
     let mut conn = state.get_conn().await?;
-
-    save_movie(&mut conn, &id, &updated_movie, true).await
+    save_movie(&mut conn, &id, &movie, true).await
 }
 
 /// Delete a movie from the Redis database by its ID.
@@ -160,3 +274,74 @@ pub async fn delete_movie(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::StatusCode;
+
+    fn sanitize_ok(title: &str, year: u16, stars: f32) -> HashKey {
+        let mut movie = Movie {
+            title: title.to_string(),
+            year,
+            stars,
+        };
+        movie.sanitize().expect("Expected sanitize to succeed")
+    }
+
+    fn sanitize_err(title: &str, year: u16, stars: f32) -> StatusCode {
+        let mut movie = Movie {
+            title: title.to_string(),
+            year,
+            stars,
+        };
+        movie.sanitize().unwrap_err()
+    }
+
+    #[test]
+    fn test_normal_title_sanitization() {
+        let key = sanitize_ok("The Shawshank Redemption", 1994, 4.5);
+        assert_eq!(key.value.len(), 40); // SHA1 hex = 40 characters
+    }
+
+    #[test]
+    fn test_title_with_extra_spaces() {
+        let key = sanitize_ok(" The    Shawshank    Redemption ", 1994, 4.5);
+        let key2 = sanitize_ok("The Shawshank Redemption", 1994, 4.5);
+        assert_eq!(
+            key.value, key2.value,
+            "Key must be the same after collapsing spaces"
+        );
+    }
+
+    #[test]
+    fn test_title_mixed_case() {
+        let key = sanitize_ok("The SHAWshank Redemption", 1994, 4.5);
+        let key2 = sanitize_ok("the shawshank redemption", 1994, 4.5);
+        assert_eq!(key.value, key2.value, "Key must be case-insensitive");
+    }
+
+    #[test]
+    fn test_empty_title_rejected() {
+        let status = sanitize_err("   ", 1994, 4.5);
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_bad_year_rejected() {
+        let status = sanitize_err("Test Movie", 1700, 4.5);
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+
+        let future_year = (chrono::Utc::now().year() as u16) + 10;
+        let status = sanitize_err("Test Movie", future_year, 4.5);
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_invalid_stars_rejected() {
+        let status = sanitize_err("Test Movie", 1994, -1.0);
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+
+        let status = sanitize_err("Test Movie", 1994, 6.0);
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+}

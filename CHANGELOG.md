@@ -1,6 +1,43 @@
 # Changelog
 
-## [1.1.0] - 2025-04-27
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+## [1.1.1] — 2025-04-28
+
+### Added
+- Implemented title and year normalization in `Movie::sanitize()`.
+- Added SHA1-based deterministic key generation from normalized movie title and year.
+- Added unit tests for movie sanitization and key generation logic.
+- Added conflict detection (`409 Conflict`) for duplicate movies (same title and year).
+- Added structured debug logging for normalized key strings before hashing.
+- Added dependencies `sha1`, `hex`, `regex`, and `chrono` for movie key generation
+  and validation.
+- Added `AXUM_LOG_LEVEL` environment variable support for setting tracing log level
+  dynamically.
+
+### Fixed
+- Fetching a non-existent movie no longer causes internal server error; returns correct 404 status.
+- Redis `SET` command now uses correct single-string storage format, avoiding syntax errors.
+
+### Changed
+- `save_movie` now serializes the `Movie` struct to JSON before storing in Redis 
+   (fixes server syntax errors).
+- `get_movie` now retrieves an `Option<String>` from Redis, properly handling missing keys 
+   with 404 responses.
+- ⚠️ Redis storage format changed: `Movie` structs are now JSON-serialized. Older incorrectly 
+  stored keys may not deserialize correctly; manual data migration may be needed.
+- Improved Redis error handling for `save_movie` and `get_movie` operations.
+- `POST /movies/add` no longer accepts client-supplied IDs. The server generates the ID 
+  automatically.
+- `POST /movies/add` now returns `201 Created` with a JSON body containing 
+  `{ "id": "<generated_id>" }`.
+- Updated **api-test.py** to capture server-generated IDs dynamically.
+- Updated **README.md** examples to show server-generated IDs and 409 Conflict behavior.
+- Simplified README examples and pointed users to `api-test.py` for full API usage.
+
+## [1.1.0] — 2025-04-27
 
 ### Added
 - Add `GET /health` endpoint for server and Redis liveness checks
@@ -12,14 +49,14 @@
 - Modularize handlers: split movies, health, and shared_types into separate modules
 - Improve server startup logging: include version and bind address at launch
 
-## [1.0.1] - 2025-04-27
+## [1.0.1] — 2025-04-27
 
 ### Changed
 - Update README.md to reflect `/movies` API namespace restructure
 - Document all CRUD operations (POST, GET, PUT, DELETE) under `/movies`
 - Update usage instructions to refer to `api-test.py` instead of `api-demo.sh`
 
-## [1.0.0] - 2025-04-27
+## [1.0.0] — 2025-04-27
 
 ### Added
 - Migrated backend storage from in-memory `HashMap` to persistent Redis database
@@ -48,7 +85,7 @@
 
 ---
 
-## [0.1.0] - 2025-04-26
+## [0.1.0] — 2025-04-26
 
 ### Added
 - Initial Axum-based movie API server
