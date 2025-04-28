@@ -1,7 +1,11 @@
-use axum::{Json, extract::{Query, State}, http::StatusCode};
-use serde::Deserialize;
 use crate::AppState;
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    Json,
+};
 use redis::AsyncCommands;
+use serde::Deserialize;
 
 #[derive(serde::Serialize)]
 pub struct HealthResponse {
@@ -43,29 +47,23 @@ pub async fn health_check(
                 Err(_) => {
                     return (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(HealthResponse { status: "error" })
+                        Json(HealthResponse { status: "error" }),
                     )
                 }
             };
 
             let ping_result: redis::RedisResult<String> = conn.ping().await;
             match ping_result {
-                Ok(_) => (
-                    StatusCode::OK,
-                    Json(HealthResponse { status: "ok" })
-                ),
+                Ok(_) => (StatusCode::OK, Json(HealthResponse { status: "ok" })),
                 Err(_) => (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(HealthResponse { status: "error" })
+                    Json(HealthResponse { status: "error" }),
                 ),
             }
         }
         _ => {
             // Light health check
-            (
-                StatusCode::OK,
-                Json(HealthResponse { status: "ok" })
-            )
+            (StatusCode::OK, Json(HealthResponse { status: "ok" }))
         }
     }
 }

@@ -1,13 +1,17 @@
 use anyhow::Result;
-use axum::{http::StatusCode, Router, routing::{get, delete, post, put},};
+use axum::{
+    http::StatusCode,
+    routing::{delete, get, post, put},
+    Router,
+};
 use redis::Client;
 use std::env;
-use tracing::{error, info};
+use tracing::{error, info, Level};
 
 mod handlers;
 
-use handlers::movies::*;
 use handlers::health::health_check;
+use handlers::movies::*;
 use handlers::root::root_handler;
 
 /// Shared application state passed to all Axum handlers.
@@ -48,9 +52,19 @@ use tracing_subscriber::fmt::format::FmtSpan;
 fn init_tracing() {
     // ---
     let span_events = match env::var("AXUM_SPAN_EVENTS").as_deref() {
-        Ok("full") => FmtSpan::FULL,              // ENTER, EXIT, CLOSE with timing
+        Ok("full") => FmtSpan::FULL, // ENTER, EXIT, CLOSE with timing
         Ok("enter_exit") => FmtSpan::ENTER | FmtSpan::EXIT, // Only ENTER and EXIT
-        _ => FmtSpan::CLOSE,                       // Default: only CLOSE timing
+        _ => FmtSpan::CLOSE,         // Default: only CLOSE timing
+    };
+
+    // Determine log level from env, default to DEBUG
+    let level = match env::var("AXUM_LOG_LEVEL").ok().as_deref() {
+        Some("trace") => Level::TRACE,
+        Some("debug") => Level::DEBUG,
+        Some("info") => Level::INFO,
+        Some("warn") => Level::WARN,
+        Some("error") => Level::ERROR,
+        _ => Level::DEBUG, // Default
     };
 
     tracing_subscriber::fmt()
@@ -58,6 +72,7 @@ fn init_tracing() {
         .with_file(true)
         .with_line_number(true)
         .with_span_events(span_events)
+        .with_max_level(level)
         .compact()
         .init();
 }
@@ -77,13 +92,15 @@ async fn main() -> Result<()> {
     let redis_client = Client::open(redis_url)?;
 
     let app = Router::new()
-        .route("/",get(root_handler))
+        .route("/", get(root_handler))
         .route("/health", get(health_check))
-        .nest("/movies", Router::new()
-              .route("/get/{id}", get(get_movie))
-              .route("/add", post(add_movie))
-              .route("/update/{id}", put(update_movie))
-              .route("/delete/{id}", delete(delete_movie))
+        .nest(
+            "/movies",
+            Router::new()
+                .route("/get/{id}", get(get_movie))
+                .route("/add", post(add_movie))
+                .route("/update/{id}", put(update_movie))
+                .route("/delete/{id}", delete(delete_movie)),
         )
         .with_state(AppState { redis_client });
 
@@ -91,7 +108,10 @@ async fn main() -> Result<()> {
     let endpoint = env::var("API_BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
 
     info!("Starting at endpoint:{}", endpoint);
-    info!("Starting Axum Quick-Start API server v{}...", env!("CARGO_PKG_VERSION"));
+    info!(
+        "Starting Axum Quick-Start API server v{}...",
+        env!("CARGO_PKG_VERSION")
+    );
 
     let listener = tokio::net::TcpListener::bind(&endpoint).await?;
     axum::serve(listener, app)
@@ -102,9 +122,9 @@ async fn main() -> Result<()> {
 }
 
 async fn shutdown_signal() {
-    use tokio::signal::unix::{signal, SignalKind};
-    use tokio::signal::ctrl_c;
     use futures::future;
+    use tokio::signal::ctrl_c;
+    use tokio::signal::unix::{signal, SignalKind};
 
     // Create a future that resolves on Ctrl+C
     let ctrl_c = async {
@@ -113,7 +133,8 @@ async fn shutdown_signal() {
 
     // Create a future that resolves on SIGTERM
     let sigterm = async {
-        let mut sigterm = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+        let mut sigterm =
+            signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
         sigterm.recv().await;
     };
 

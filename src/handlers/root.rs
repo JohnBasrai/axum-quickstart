@@ -1,4 +1,4 @@
-use axum::{response::IntoResponse};
+use axum::response::IntoResponse;
 
 pub async fn root_handler() -> impl IntoResponse {
     let version = env!("CARGO_PKG_VERSION");
@@ -18,5 +18,4 @@ This API demonstrates CRUD operations for movies, health checking (including Red
 and dynamic version reporting.
 "#
     )
-
 }

@@ -1,4 +1,4 @@
-pub mod movies;
 pub mod health;
-pub mod shared_types;
+pub mod movies;
 pub mod root;
+pub mod shared_types;
