@@ -22,11 +22,19 @@ async fn spawn_app() -> Result<(SocketAddr, JoinHandle<()>)> {
     Ok((addr, handle))
 }
 
+macro_rules! spawn_app {
+    () => {{
+        let (addr, _server_handle) = spawn_app().await.unwrap();
+        let client = reqwest::Client::new();
+        (addr, client)
+    }};
+}
+
+
 #[tokio::test]
 async fn health_check_works() -> Result<()> {
     // ---
-    let (addr, _server_handle) = spawn_app().await?;
-    let client = reqwest::Client::new();
+    let (addr, client) = spawn_app!();
 
     let response = client
         .get(&format!("http://{}/health", addr))
@@ -44,8 +52,7 @@ async fn health_check_works() -> Result<()> {
 #[tokio::test]
 async fn health_check_full_mode_works() -> Result<()> {
     // ---
-    let (addr, _server_handle) = spawn_app().await?;
-    let client = reqwest::Client::new();
+    let (addr, client) = spawn_app!();
 
     let response = client
         .get(format!("http://{}/health?mode=full", addr))
@@ -65,8 +72,7 @@ async fn health_check_full_mode_works() -> Result<()> {
 async fn movie_lifecycle_works() -> Result<()> {
     // ---
     use rand::Rng; // add rand = "0.8" to [dev-dependencies] if needed
-    let (addr, _server_handle) = spawn_app().await?;
-    let client = reqwest::Client::new();
+    let (addr, client) = spawn_app!();
 
     // Create a unique movie title
     let suffix: u32 = rand::thread_rng().gen();
@@ -137,8 +143,7 @@ async fn movie_lifecycle_works() -> Result<()> {
 #[tokio::test]
 async fn add_movie_missing_title_returns_422() -> Result<()> {
     // ---
-    let (addr, _server_handle) = spawn_app().await?;
-    let client = reqwest::Client::new();
+    let (addr, client) = spawn_app!();
 
     let bad_movie = serde_json::json!({
         "year": 1994,
@@ -162,8 +167,7 @@ async fn add_movie_missing_title_returns_422() -> Result<()> {
 #[tokio::test]
 async fn add_movie_with_invalid_year_returns_400() -> Result<()> {
     // ---
-    let (addr, _server_handle) = spawn_app().await?;
-    let client = reqwest::Client::new();
+    let (addr, client) = spawn_app!();
 
     let invalid_movie = serde_json::json!({
         "title": "Bad Year Movie",
@@ -185,8 +189,7 @@ async fn add_movie_with_invalid_year_returns_400() -> Result<()> {
 #[tokio::test]
 async fn add_movie_with_invalid_stars_returns_400() -> Result<()> {
     // ---
-    let (addr, _server_handle) = spawn_app().await?;
-    let client = reqwest::Client::new();
+    let (addr, client) = spawn_app!();
 
     let invalid_movie = serde_json::json!({
         "title": "Bad Stars Movie",
@@ -208,8 +211,7 @@ async fn add_movie_with_invalid_stars_returns_400() -> Result<()> {
 #[tokio::test]
 async fn fetch_nonexistent_movie_returns_404() -> Result<()> {
     // ---
-    let (addr, _server_handle) = spawn_app().await?;
-    let client = reqwest::Client::new();
+    let (addr, client) = spawn_app!();
 
     let fake_id = "nonexistent123";
 
