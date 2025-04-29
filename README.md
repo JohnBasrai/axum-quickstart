@@ -2,7 +2,8 @@
 
 ## Overview
 
-This project is a quickstart template for building a simple RESTful API using Axum in Rust. It includes:
+This project is a quickstart template for building a simple RESTful API using Axum in Rust.
+It includes:
 
 - Basic CRUD endpoints for managing movies.
 - Redis backend for persistent storage.
