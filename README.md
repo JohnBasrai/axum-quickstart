@@ -5,13 +5,14 @@
 
 ## Overview
 
-This project is a quickstart template for building a simple RESTful API using Axum in Rust.
+This project is a quickstart template for building a **production-ready RESTful API** in Rust using Axum and Tokio.
 It includes:
 
-- Basic CRUD endpoints for managing movies.
-- Redis backend for persistent storage.
-- Full HTTP integration testing using reqwest.
-- Clean project structure with separation of concerns.
+ - Full CRUD endpoints for managing movies
+ - HTML root (`/`) page with dynamic version display
+ - Redis-backed storage for persistence
+ - Comprehensive HTTP integration tests using reqwest
+ - Clean project architecture with modular separation of concerns
 
 ---
 
@@ -28,6 +29,8 @@ Then start the server:
     cargo run
 
 The application will be available at http://localhost:8080.
+Opening the root URL (`/`) in a browser will display a styled HTML status page with 
+the current application version (auto-extracted from `Cargo.toml` at build time).
 
 ---
 
@@ -49,8 +52,8 @@ To run the tests:
 
 This will run:
 
-- Unit tests inside src/
-- Full HTTP-based integration tests inside tests/
+- Unit tests inside `src/`
+- Full HTTP-based integration tests inside `tests/`
 
 Each integration test spins up its own isolated Axum server instance and binds to a random port, allowing tests to run concurrently without conflict.
 
@@ -66,9 +69,6 @@ Each integration test spins up its own isolated Axum server instance and binds t
       handlers/      # Route handlers (movies, health, etc.)
     tests/
       integration.rs # Full end-to-end integration tests
-    scripts/
-      api-test.py    # (Deprecated) Old manual Python API test script
-
 ---
 
 ## License
