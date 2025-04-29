@@ -37,7 +37,7 @@ async fn health_check_works() -> Result<()> {
     let (addr, client) = spawn_app!();
 
     let response = client
-        .get(&format!("http://{}/health", addr))
+        .get(format!("http://{}/health", addr))
         .send()
         .await?;
 
