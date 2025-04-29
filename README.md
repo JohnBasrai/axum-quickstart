@@ -1,5 +1,8 @@
 # Axum Quickstart Project
 
+[![Rust CI](https://github.com/JohnBasrai/axum-quickstart/actions/workflows/rust.yml/badge.svg)](https://github.com/JohnBasrai/axum-quickstart/actions)
+[![Latest Release](https://img.shields.io/github/v/release/JohnBasrai/axum-quickstart?style=flat-square)](https://github.com/JohnBasrai/axum-quickstart/releases)
+
 ## Overview
 
 This project is a quickstart template for building a simple RESTful API using Axum in Rust.
