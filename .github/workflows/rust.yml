@@ -25,16 +25,6 @@ jobs:
     - name: Run Clippy (Rust linter)
       run: cargo clippy --all-targets --all-features -- -D warnings
 
-#   - name: Run cargo audit (Security check)
-#     run: |
-#       cargo install cargo-audit --force
-#       cargo audit
-
-#   - name: Run cargo outdated (Dependency update check)
-#     run: |
-#       cargo install cargo-outdated --force
-#       cargo outdated || true
-
     - name: Check code formatting
       run: cargo fmt --check
 
