@@ -220,3 +220,35 @@ async fn fetch_nonexistent_movie_returns_404() -> Result<()> {
 
     Ok(())
 }
+
+/// Integration test for the root `/` endpoint.
+///
+/// This test verifies:
+/// - HTTP status is 200 OK
+/// - The `Content-Type` header is `text/html`
+/// - The response body includes basic HTML structure
+/// - The response includes the crate version string
+#[tokio::test]
+async fn root_returns_ok_and_html() -> anyhow::Result<()> {
+    let (addr, _handle) = spawn_app!();
+
+    let response = reqwest::get(format!("http://{}/", addr)).await?;
+    let status = response.status();
+
+    let content_type = response
+        .headers()
+        .get("content-type")
+        .ok_or_else(|| anyhow::anyhow!("missing content-type header"))?
+        .to_str()
+        .map_err(|e| anyhow::anyhow!("invalid content-type header: {e}"))?;
+
+    assert!(content_type.contains("text/html"));
+    assert_eq!(status, StatusCode::OK);
+
+    let body = response.text().await?;
+
+    assert!(body.contains("<!DOCTYPE html>"));
+    assert!(body.contains(env!("CARGO_PKG_VERSION")));
+
+    Ok(())
+}
