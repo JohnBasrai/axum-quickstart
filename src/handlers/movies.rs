@@ -79,13 +79,10 @@ pub async fn get_movie(
 
     tracing::debug!("get movie: {id}");
 
-    let result: Option<String> = conn
-        .get(&id)
-        .await
-        .map_err(|err| {
-            tracing::info!("Got internal server error: {:?}", &err);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let result: Option<String> = conn.get(&id).await.map_err(|err| {
+        tracing::info!("Got internal server error: {:?}", &err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let json_string = match result {
         Some(val) => val,
@@ -95,11 +92,10 @@ pub async fn get_movie(
         }
     };
 
-    let movie: Movie = serde_json::from_str(&json_string)
-        .map_err(|err| {
-            tracing::info!("Error parsing JSON: {:?}", &err);
-            StatusCode::BAD_REQUEST
-        })?;
+    let movie: Movie = serde_json::from_str(&json_string).map_err(|err| {
+        tracing::info!("Error parsing JSON: {:?}", &err);
+        StatusCode::BAD_REQUEST
+    })?;
 
     tracing::trace!("Movie return: {}/{:?}", &id, &movie);
 
@@ -116,13 +112,10 @@ async fn save_movie(
     tracing::trace!("save_movie {}/{:?}", &movie_id, &movie);
 
     if !allow_overwrite {
-        let exists: bool = conn
-            .exists(movie_id)
-            .await
-            .map_err(|err| {
-                tracing::info!("Got internal server error (1): {:?}", &err);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+        let exists: bool = conn.exists(movie_id).await.map_err(|err| {
+            tracing::info!("Got internal server error (1): {:?}", &err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
         if exists {
             tracing::trace!("Conflict");
             return Err(StatusCode::CONFLICT);
@@ -135,14 +128,11 @@ async fn save_movie(
     })?;
     tracing::trace!("Writing movie: {:?}", &movie_json);
 
-    let _: () = conn
-        .set(movie_id, movie_json)
-        .await
-        .map_err(|err| {
-            tracing::info!("Got internal server error (2): {:?}", &err);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-    
+    let _: () = conn.set(movie_id, movie_json).await.map_err(|err| {
+        tracing::info!("Got internal server error (2): {:?}", &err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     tracing::warn!("save movie OK");
 
     if allow_overwrite {
@@ -206,8 +196,8 @@ pub async fn add_movie(
     tracing::debug!("Inserting new movie, key:{redis_key}");
 
     // Insert new movie
-    let serialized = serde_json::to_string(&movie)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let serialized =
+        serde_json::to_string(&movie).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     redis::cmd("SET")
         .arg(&redis_key)
@@ -216,10 +206,7 @@ pub async fn add_movie(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(CreatedResponse { id: redis_key }),
-    ))
+    Ok((StatusCode::CREATED, Json(CreatedResponse { id: redis_key })))
 }
 
 /// Handler for updating an existing movie entry (PUT /update/{id}).

@@ -1,7 +1,11 @@
 // src/lib.rs
-use axum::{Router, routing::{get, post, put, delete}, http::StatusCode};
-use redis::Client;
 use anyhow::Result;
+use axum::{
+    http::StatusCode,
+    routing::{delete, get, post, put},
+    Router,
+};
+use redis::Client;
 use std::env;
 
 mod handlers;
@@ -42,7 +46,6 @@ impl AppState {
             })
     }
 }
-
 
 pub fn create_app() -> Result<Router> {
     // ---

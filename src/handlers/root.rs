@@ -1,12 +1,11 @@
-use axum::{
-    response::{Html, IntoResponse},
-};
+use axum::response::{Html, IntoResponse};
 
 pub async fn root_handler() -> impl IntoResponse {
     // ---
     let version = env!("CARGO_PKG_VERSION");
 
-    Html(format!(r#"
+    Html(format!(
+        r#"
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -65,5 +64,7 @@ Available endpoints:
   </div>
 </body>
 </html>
-"#, version = version))
+"#,
+        version = version
+    ))
 }

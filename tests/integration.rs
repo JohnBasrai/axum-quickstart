@@ -7,7 +7,7 @@ use tokio::task::JoinHandle;
 async fn spawn_app() -> Result<(SocketAddr, JoinHandle<()>)> {
     // ---
     let app = create_app()?;
-    
+
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
     let addr = listener.local_addr()?;
 
@@ -30,16 +30,12 @@ macro_rules! spawn_app {
     }};
 }
 
-
 #[tokio::test]
 async fn health_check_works() -> Result<()> {
     // ---
     let (addr, client) = spawn_app!();
 
-    let response = client
-        .get(format!("http://{}/health", addr))
-        .send()
-        .await?;
+    let response = client.get(format!("http://{}/health", addr)).send().await?;
 
     assert_eq!(response.status(), StatusCode::OK);
 
