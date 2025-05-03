@@ -7,6 +7,11 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2] – 2025-05-03
+### Added
+- Integration test for graceful shutdown using `.with_graceful_shutdown()`
+- Integration test for root `/` endpoint
+
 ## [1.1.2] — 2025-04-28
 
 ### Added
