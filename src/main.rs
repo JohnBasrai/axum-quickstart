@@ -56,25 +56,28 @@ async fn main() -> Result<()> {
 
     let listener = tokio::net::TcpListener::bind(&endpoint).await?;
     axum::serve(listener, app)
-        .with_graceful_shutdown(real_shutdown_signal())
+        .with_graceful_shutdown(shutdown_signal())
         .await?;
 
     Ok(())
 }
 
-fn real_shutdown_signal() -> impl std::future::Future<Output = ()> {
+fn shutdown_signal() -> impl std::future::Future<Output = ()> {
+    // ---
     use futures::future;
     use tokio::signal::ctrl_c;
     use tokio::signal::unix::{signal, SignalKind};
 
     let ctrl_c = async {
         ctrl_c().await.expect("failed to install Ctrl+C handler");
+        tracing::info!("Caught Control-C. Closing server gracefully...");
     };
 
     let sigterm = async {
         let mut sigterm =
             signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
         sigterm.recv().await;
+        tracing::info!("Caught SIGTERM. Closing server gracefully...");
     };
 
     future::select(Box::pin(ctrl_c), Box::pin(sigterm)).map(|_| ())
@@ -85,16 +88,14 @@ mod tests {
 
     #[tokio::test]
     async fn shutdown_signal_completes() {
-        let fake_signal = async {};
-        shutdown_signal(fake_signal).await;
-        // Optional: assert logs, state flags, etc.
+        let fake_signal_handler = async {};
+        shutdown_signal_trait(fake_signal_handler).await;
     }
 
-    async fn shutdown_signal<F>(signal: F)
+    async fn shutdown_signal_trait<F>(signal: F)
     where
         F: std::future::Future<Output = ()>,
     {
         signal.await;
-        tracing::info!("Shutdown signal received. Closing server gracefully...");
     }
 }
