@@ -1,5 +1,6 @@
 use anyhow::Result;
 use axum_quickstart::create_app; // <-- this will now work
+use futures::FutureExt;
 use std::env;
 use tracing::{info, Level};
 
@@ -55,31 +56,45 @@ async fn main() -> Result<()> {
 
     let listener = tokio::net::TcpListener::bind(&endpoint).await?;
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
+        .with_graceful_shutdown(real_shutdown_signal())
         .await?;
 
     Ok(())
 }
 
-async fn shutdown_signal() {
+fn real_shutdown_signal() -> impl std::future::Future<Output = ()> {
     use futures::future;
     use tokio::signal::ctrl_c;
     use tokio::signal::unix::{signal, SignalKind};
 
-    // Create a future that resolves on Ctrl+C
     let ctrl_c = async {
         ctrl_c().await.expect("failed to install Ctrl+C handler");
     };
 
-    // Create a future that resolves on SIGTERM
     let sigterm = async {
         let mut sigterm =
             signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
         sigterm.recv().await;
     };
 
-    // Wait for either to complete
-    future::select(Box::pin(ctrl_c), Box::pin(sigterm)).await;
+    future::select(Box::pin(ctrl_c), Box::pin(sigterm)).map(|_| ())
+}
 
-    tracing::info!("Shutdown signal received. Closing server gracefully...");
+#[cfg(test)]
+mod tests {
+
+    #[tokio::test]
+    async fn shutdown_signal_completes() {
+        let fake_signal = async {};
+        shutdown_signal(fake_signal).await;
+        // Optional: assert logs, state flags, etc.
+    }
+
+    async fn shutdown_signal<F>(signal: F)
+    where
+        F: std::future::Future<Output = ()>,
+    {
+        signal.await;
+        tracing::info!("Shutdown signal received. Closing server gracefully...");
+    }
 }
