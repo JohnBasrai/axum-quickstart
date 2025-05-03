@@ -35,6 +35,9 @@ jobs:
 #       cargo install cargo-outdated --force
 #       cargo outdated || true
 
+    - name: Check code formatting
+      run: cargo fmt --check
+
     - name: Build
       run: cargo build --verbose
 
