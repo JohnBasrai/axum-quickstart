@@ -1,10 +1,24 @@
-use axum::response::{Html, IntoResponse};
+use crate::AppState;
+use axum::{
+    extract::State,
+    response::{Html, IntoResponse},
+};
+use std::time::Instant;
 
-pub async fn root_handler() -> impl IntoResponse {
-    // ---
+/// Handler for the root endpoint (GET /).
+///
+/// Returns an HTML page with information about the API, including:
+/// - Application version from Cargo.toml
+/// - List of available endpoints
+/// - Basic styling for a clean presentation
+///
+/// This serves as both a landing page and API documentation for users
+/// accessing the service through a web browser.
+pub async fn root_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let start = Instant::now();
     let version = env!("CARGO_PKG_VERSION");
 
-    Html(format!(
+    let html = Html(format!(
         r#"
 <!DOCTYPE html>
 <html lang="en">
@@ -60,11 +74,17 @@ Available endpoints:
   - DELETE /movies/delete         Delete a movie entry by ID
   - GET    /health                Light health check
   - GET    /health?mode=full      Full health check (includes Redis)
+  - GET    /metrics               Prometheus metrics endpoint
     </code></pre>
   </div>
 </body>
 </html>
 "#,
         version = version
-    ))
+    ));
+
+    // Record metrics for the root handler
+    state.metrics().record_http_request(start, "/", "GET", 200);
+
+    html
 }

@@ -11,8 +11,44 @@ It includes:
  - Full CRUD endpoints for managing movies
  - HTML root (`/`) page with dynamic version display
  - Redis-backed storage for persistence
+ - **Prometheus metrics collection and export**
+ - **Health checks with Redis connectivity testing**
+ - **Environment-based configuration**
  - Comprehensive HTTP integration tests using reqwest
- - Clean project architecture with modular separation of concerns
+ - Clean project architecture with domain/infrastructure separation
+
+---
+
+## Features
+
+### API Endpoints
+- `GET /` - HTML landing page with API documentation
+- `GET /health` - Light health check
+- `GET /health?mode=full` - Full health check including Redis connectivity
+- `GET /metrics` - Prometheus metrics endpoint
+- `POST /movies/add` - Add a new movie
+- `GET /movies/get/{id}` - Fetch movie by ID
+- `PUT /movies/update/{id}` - Update existing movie
+- `DELETE /movies/delete/{id}` - Delete movie
+
+### Observability
+- **Metrics**: HTTP request duration, status codes, and business metrics (movie creation events)
+- **Structured logging**: Configurable log levels and tracing
+- **Health monitoring**: Redis connectivity checks
+
+---
+
+## Configuration
+
+The application supports environment-based configuration:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection string |
+| `API_BIND_ADDR` | `127.0.0.1:8080` | Server bind address |
+| `AXUM_METRICS_TYPE` | `noop` | Metrics backend (`prom` or `noop`) |
+| `AXUM_LOG_LEVEL` | `debug` | Log level (`trace`, `debug`, `info`, `warn`, `error`) |
+| `AXUM_SPAN_EVENTS` | `close` | Tracing span events (`full`, `enter_exit`, `close`) |
 
 ---
 
@@ -29,8 +65,16 @@ Then start the server:
     cargo run
 
 The application will be available at http://localhost:8080.
-Opening the root URL (`/`) in a browser will display a styled HTML status page with 
-the current application version (auto-extracted from `Cargo.toml` at build time).
+
+### With Prometheus Metrics
+
+To enable Prometheus metrics collection:
+
+    AXUM_METRICS_TYPE=prom cargo run
+
+Then visit:
+- http://localhost:8080 - Application landing page
+- http://localhost:8080/metrics - Prometheus metrics endpoint
 
 ---
 
@@ -52,23 +96,50 @@ To run the tests:
 
 This will run:
 
-- Unit tests inside `src/`
+- Unit tests inside `src/` (domain logic, metrics, app state)
 - Full HTTP-based integration tests inside `tests/`
+- Metrics endpoint integration tests
 
 Each integration test spins up its own isolated Axum server instance and binds to a random port, allowing tests to run concurrently without conflict.
-
-> Note: The old Python-based scripts/api-test.py is deprecated and no longer maintained. All testing is now handled natively in Rust.
 
 ---
 
 ## Project Structure
 
     src/
-      lib.rs         # Application setup (create_app)
-      main.rs        # Server startup entry point
-      handlers/      # Route handlers (movies, health, etc.)
+      lib.rs              # Application setup and router creation
+      main.rs             # Server startup entry point
+      app_state.rs        # Shared application state
+      domain/             # Business logic and abstractions
+        metrics.rs        # Metrics trait definition
+      handlers/           # Route handlers
+        movies.rs         # Movie CRUD operations
+        health.rs         # Health check endpoints
+        metrics.rs        # Metrics endpoint
+        root.rs           # Landing page
+      infrastructure/     # External service implementations
+        metrics/          # Metrics implementations module
+          noop/           # No-op metrics implementation
+          prometheus/     # Prometheus metrics implementation
     tests/
-      integration.rs # Full end-to-end integration tests
+      integration.rs      # Basic integration tests
+      metrics_endpoint.rs # Metrics-specific integration tests
+---
+
+## Architecture
+
+The project follows **Clean Architecture** principles with clear separation between:
+
+- **Domain Layer**: Business logic and trait definitions (`domain/`)
+- **Infrastructure Layer**: External service implementations (`infrastructure/`)
+- **Application Layer**: HTTP handlers and routing (`handlers/`, `lib.rs`)
+
+This design allows for:
+- Easy testing with mock implementations
+- Swappable backends (metrics, storage, etc.)
+- Clear dependency boundaries
+- Maintainable and scalable code
+
 ---
 
 ## License

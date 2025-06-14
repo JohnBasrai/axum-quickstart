@@ -7,6 +7,26 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-06-14
+
+### Added
+- Prometheus metrics collection and export
+- `/metrics` endpoint for Prometheus scraping
+- HTTP request duration and status code metrics
+- Business metrics (movie creation events)
+- Environment-based metrics configuration (`AXUM_METRICS_TYPE`)
+- Full health check mode with Redis connectivity testing
+- Domain/Infrastructure architecture separation following EMBP
+- Comprehensive metrics integration tests
+
+### Changed
+- Enhanced `/health` endpoint with optional `mode=full` parameter
+- Updated project structure with clean architecture principles
+- Improved documentation with configuration table and architecture overview
+
+### Dependencies
+- Added `metrics`, `metrics-exporter-prometheus`, `prometheus`
+
 ## [1.2.2] – 2025-05-03
 ### Added
 - Integration test for graceful shutdown using `.with_graceful_shutdown()`

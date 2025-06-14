@@ -10,6 +10,7 @@ use redis::AsyncCommands;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use std::time::Instant;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Movie {
@@ -25,11 +26,13 @@ pub struct HashKey {
 
 impl Movie {
     // ---
+
     /// Sanitizes the Movie instance by trimming whitespace,
     /// collapsing multiple spaces, validating fields, and generating
     /// a HashKey based on normalized title and year.
     pub fn sanitize(&mut self) -> Result<HashKey, StatusCode> {
         // ---
+
         let re = Regex::new(r"\s+").unwrap();
 
         // Trim leading/trailing and collapse internal spaces
@@ -75,12 +78,18 @@ pub async fn get_movie(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<(StatusCode, ApiResponse<Movie>), StatusCode> {
+    // ---
+
+    let start = Instant::now();
     let mut conn = state.get_conn().await?;
 
     tracing::debug!("get movie: {id}");
 
     let result: Option<String> = conn.get(&id).await.map_err(|err| {
         tracing::info!("Got internal server error: {:?}", &err);
+        state
+            .metrics()
+            .record_http_request(start, "/movies/get", "GET", 500);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
@@ -88,16 +97,25 @@ pub async fn get_movie(
         Some(val) => val,
         None => {
             tracing::trace!("Movie not found: {id}");
+            state
+                .metrics()
+                .record_http_request(start, "/movies/get", "GET", 404);
             return Err(StatusCode::NOT_FOUND);
         }
     };
 
     let movie: Movie = serde_json::from_str(&json_string).map_err(|err| {
         tracing::info!("Error parsing JSON: {:?}", &err);
+        state
+            .metrics()
+            .record_http_request(start, "/movies/get", "GET", 400);
         StatusCode::BAD_REQUEST
     })?;
 
     tracing::trace!("Movie return: {}/{:?}", &id, &movie);
+    state
+        .metrics()
+        .record_http_request(start, "/movies/get", "GET", 200);
 
     Ok((StatusCode::OK, ApiResponse { data: movie }))
 }
@@ -109,6 +127,7 @@ async fn save_movie(
     allow_overwrite: bool,
 ) -> Result<StatusCode, StatusCode> {
     // ---
+
     tracing::trace!("save_movie {}/{:?}", &movie_id, &movie);
 
     if !allow_overwrite {
@@ -162,13 +181,22 @@ pub async fn add_movie(
     Json(mut movie): Json<Movie>,
 ) -> Result<(StatusCode, Json<CreatedResponse>), StatusCode> {
     // ---
-    // Sanitize the movie and get a hash key for it
-    let hash_key = movie.sanitize()?;
 
-    let mut conn = state
-        .get_conn()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let start = Instant::now();
+
+    // Sanitize the movie and get a hash key for it
+    let hash_key = movie.sanitize().inspect_err(|_err| {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/add", "POST", 400);
+    })?;
+
+    let mut conn = state.get_conn().await.map_err(|_| {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/add", "POST", 500);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let redis_key = hash_key.value;
 
@@ -186,25 +214,48 @@ pub async fn add_movie(
         .arg(&redis_key)
         .query_async::<i32>(&mut conn)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| {
+            state
+                .metrics()
+                .record_http_request(start, "/movies/add", "POST", 500);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
         != 0
     {
         tracing::debug!("Duplicate detected: {}", &redis_key);
+        state
+            .metrics()
+            .record_http_request(start, "/movies/add", "POST", 409);
         return Err(StatusCode::CONFLICT);
     }
 
     tracing::debug!("Inserting new movie, key:{redis_key}");
 
     // Insert new movie
-    let serialized =
-        serde_json::to_string(&movie).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let serialized = serde_json::to_string(&movie).map_err(|_| {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/add", "POST", 500);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     redis::cmd("SET")
         .arg(&redis_key)
         .arg(&serialized)
         .query_async::<()>(&mut conn)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|_| {
+            state
+                .metrics()
+                .record_http_request(start, "/movies/add", "POST", 500);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Record successful movie creation
+    state.metrics().record_movie_created();
+    state
+        .metrics()
+        .record_http_request(start, "/movies/add", "POST", 201);
 
     Ok((StatusCode::CREATED, Json(CreatedResponse { id: redis_key })))
 }
@@ -224,9 +275,37 @@ pub async fn update_movie(
     Json(mut movie): Json<Movie>,
 ) -> Result<StatusCode, StatusCode> {
     // ---
-    movie.sanitize()?;
-    let mut conn = state.get_conn().await?;
-    save_movie(&mut conn, &id, &movie, true).await
+
+    let start = Instant::now();
+
+    movie.sanitize().inspect_err(|_err| {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/update", "PUT", 400);
+    })?;
+
+    let mut conn = state.get_conn().await.inspect_err(|_err| {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/update", "PUT", 500);
+    })?;
+
+    let result = save_movie(&mut conn, &id, &movie, true).await;
+
+    match &result {
+        Ok(status) => {
+            state
+                .metrics()
+                .record_http_request(start, "/movies/update", "PUT", status.as_u16());
+        }
+        Err(status) => {
+            state
+                .metrics()
+                .record_http_request(start, "/movies/update", "PUT", status.as_u16());
+        }
+    }
+
+    result
 }
 
 /// Delete a movie from the Redis database by its ID.
@@ -247,22 +326,39 @@ pub async fn delete_movie(
     Path(id): Path<String>,
 ) -> Result<StatusCode, StatusCode> {
     // ---
-    let mut conn = state.get_conn().await?;
 
-    let deleted: u64 = conn
-        .del(&id)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let start = Instant::now();
+
+    let mut conn = state.get_conn().await.inspect_err(|_err| {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/delete", "DELETE", 500);
+    })?;
+
+    let deleted: u64 = conn.del(&id).await.map_err(|_| {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/delete", "DELETE", 500);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     if deleted == 0 {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/delete", "DELETE", 404);
         Err(StatusCode::NOT_FOUND)
     } else {
+        state
+            .metrics()
+            .record_http_request(start, "/movies/delete", "DELETE", 204);
         Ok(StatusCode::NO_CONTENT)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    // ---
+
     use super::*;
     use axum::http::StatusCode;
 

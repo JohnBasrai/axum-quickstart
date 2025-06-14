@@ -6,6 +6,7 @@ use axum::{
 };
 use redis::AsyncCommands;
 use serde::Deserialize;
+use std::time::Instant;
 
 #[derive(serde::Serialize)]
 pub struct HealthResponse {
@@ -39,30 +40,50 @@ pub async fn health_check(
     State(state): State<AppState>,
     Query(params): Query<HealthQuery>,
 ) -> (StatusCode, Json<HealthResponse>) {
+    // ---
+
+    let start = Instant::now();
+
     match params.mode.as_deref() {
         Some("full") => {
             // Full health check: Ping Redis
             let mut conn = match state.get_conn().await {
                 Ok(conn) => conn,
                 Err(_) => {
+                    state
+                        .metrics()
+                        .record_http_request(start, "/health", "GET", 500);
                     return (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(HealthResponse { status: "error" }),
-                    )
+                    );
                 }
             };
 
             let ping_result: redis::RedisResult<String> = conn.ping().await;
             match ping_result {
-                Ok(_) => (StatusCode::OK, Json(HealthResponse { status: "ok" })),
-                Err(_) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(HealthResponse { status: "error" }),
-                ),
+                Ok(_) => {
+                    state
+                        .metrics()
+                        .record_http_request(start, "/health", "GET", 200);
+                    (StatusCode::OK, Json(HealthResponse { status: "ok" }))
+                }
+                Err(_) => {
+                    state
+                        .metrics()
+                        .record_http_request(start, "/health", "GET", 500);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(HealthResponse { status: "error" }),
+                    )
+                }
             }
         }
         _ => {
             // Light health check
+            state
+                .metrics()
+                .record_http_request(start, "/health", "GET", 200);
             (StatusCode::OK, Json(HealthResponse { status: "ok" }))
         }
     }
