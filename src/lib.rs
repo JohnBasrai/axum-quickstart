@@ -36,7 +36,7 @@ pub fn create_router() -> Result<Router> {
         create_noop_metrics()?
     };
 
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt::try_init().ok(); // ✅ Ignores if already initialized
 
     let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
     let redis_client = Client::open(redis_url)?;

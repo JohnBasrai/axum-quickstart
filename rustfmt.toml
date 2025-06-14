@@ -1,0 +1,81 @@
+# Rustfmt configuration for axum-quickstart
+# This file contains ONLY stable options that work with stable Rust
+
+# Edition settings
+edition = "2021"
+
+# Basic formatting
+max_width = 100
+tab_spaces = 4
+hard_tabs = false
+
+# Import organization
+reorder_imports = true
+reorder_modules = true
+
+# Shorthand preferences
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+# Explicit ABI for extern blocks
+force_explicit_abi = true
+
+# Trailing commas
+match_block_trailing_comma = false
+
+# Nested parens
+remove_nested_parens = true
+
+# Derive merging
+merge_derives = true
+
+# Function parameter layout
+fn_params_layout = "Tall"
+
+# Match arm leading pipes
+match_arm_leading_pipes = "Never"
+
+# Width settings
+fn_call_width = 60
+array_width = 60
+chain_width = 60
+struct_lit_width = 18
+struct_variant_width = 35
+attr_fn_like_width = 70
+single_line_if_else_max_width = 50
+single_line_let_else_max_width = 50
+
+# Small heuristics
+use_small_heuristics = "Default"
+
+# Short array threshold
+short_array_element_width_threshold = 10
+
+# Newline style
+newline_style = "Auto"
+
+# Emergency brake (if needed)
+disable_all_formatting = false
+
+# =============================================================================
+# BLANK LINES & VISUAL FORMATTING
+# =============================================================================
+# Note: rustfmt on stable removes blank lines at the start of:
+# - impl blocks
+# - function bodies
+# - after function signatures inside blocks
+# 
+# This project uses "// ---" comment separators instead for visual separation.
+# 
+# The following options are UNSTABLE and require nightly + unstable_features=true:
+# - normalize_comments (unstable)
+# - format_strings (unstable)
+# - blank_lines_upper_bound (unstable)
+# - blank_lines_lower_bound (unstable)
+# - brace_style (unstable)
+# - control_brace_style (unstable)
+# - fn_single_line (unstable)
+# - format_code_in_doc_comments (unstable)
+# - group_imports (unstable)
+# - imports_granularity (unstable)
+# =============================================================================
