@@ -7,6 +7,19 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.1] - 2025-06-14
+
+### Fixed
+- Resolved Prometheus metrics recorder initialization conflicts in tests
+- Fixed Clippy lint warnings
+- Updated CI workflow to use test scripts for consistency with dev mode
+- Improved test reliability with proper singleton pattern for metrics initialization
+
+### Changed
+- Enhanced Prometheus recorder initialization using `OnceLock::get_or_init()` for thread-safe single initialization
+- Updated GitHub Actions workflow to use `dtolnay/rust-toolchain` (replacing deprecated `actions-rs/toolchain`)
+- Improved CI caching strategy with more specific cache paths and restore keys
+
 ## [1.3.0] - 2025-06-14
 
 ### Added

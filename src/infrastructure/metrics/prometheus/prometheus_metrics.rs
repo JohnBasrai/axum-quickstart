@@ -30,6 +30,8 @@ impl PrometheusMetrics {
 }
 
 impl Metrics for PrometheusMetrics {
+    // ---
+
     fn render(&self) -> String {
         // Use the recorder utility to get actual metrics
         super::render_metrics()

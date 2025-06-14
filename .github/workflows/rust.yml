@@ -10,26 +10,44 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  test-all:
     runs-on: ubuntu-latest
-
-    services:
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
+    name: Complete Test Suite
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Run Clippy (Rust linter)
-      run: cargo clippy --all-targets --all-features -- -D warnings
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
 
-    - name: Check code formatting
-      run: cargo fmt --check
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
 
-    - name: Build
-      run: cargo build --verbose
+    # Docker Compose is pre-installed on GitHub Actions ubuntu-latest runners
+    - name: Verify Docker Compose
+      run: docker compose version
 
-    - name: Run tests
-      run: cargo test --verbose
+    - name: Make test script executable
+      run: chmod +x ./scripts/test-all.sh
+
+    - name: Run complete test suite (same as local)
+      run: ./scripts/test-all.sh
+
+    - name: Upload test results (on failure)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs
+        path: test.log
+        retention-days: 7

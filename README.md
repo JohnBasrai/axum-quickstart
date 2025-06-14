@@ -80,9 +80,19 @@ Then visit:
 
 ## Running Tests
 
+### Quick Start
+
+Use the provided test scripts for convenience:
+
+```bash
+./scripts/test-all.sh  # Complete test suite (same as CI)
+```
+
+### Manual Testing
+
 Integration tests are written in Rust and use real HTTP requests via reqwest.
 
-To run the tests:
+To run tests manually:
 
 1. **Start a Redis server locally**
 
