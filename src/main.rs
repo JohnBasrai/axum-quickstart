@@ -1,14 +1,12 @@
 use anyhow::Result;
-use axum_quickstart::create_app; // <-- this will now work
+use axum_quickstart::create_router;
 use futures::FutureExt;
 use std::env;
-use tracing::{info, Level};
-
+use tracing::Level;
 use tracing_subscriber::fmt::format::FmtSpan;
 
 // Initialize tracing subscriber
 fn init_tracing() {
-    // ---
     let span_events = match env::var("AXUM_SPAN_EVENTS").as_deref() {
         Ok("full") => FmtSpan::FULL, // ENTER, EXIT, CLOSE with timing
         Ok("enter_exit") => FmtSpan::ENTER | FmtSpan::EXIT, // Only ENTER and EXIT
@@ -37,25 +35,20 @@ fn init_tracing() {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // ---
     // Initialize tracing subscriber to log to stdout
     init_tracing();
 
-    tracing::info!("Starting axum server...");
-
-    let app = create_app()?;
+    // Create router with metrics determined by environment variables
+    let router = create_router()?;
 
     // Get optional bind endpoint from environment
     let endpoint = env::var("API_BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
 
-    info!("Starting at endpoint:{}", endpoint);
-    info!(
-        "Starting Axum Quick-Start API server v{}...",
-        env!("CARGO_PKG_VERSION")
-    );
+    let version = env!("CARGO_PKG_VERSION");
+    tracing::info!("Starting axum server {version} on endpoint:{}", endpoint);
 
     let listener = tokio::net::TcpListener::bind(&endpoint).await?;
-    axum::serve(listener, app)
+    axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
 
@@ -63,7 +56,6 @@ async fn main() -> Result<()> {
 }
 
 fn shutdown_signal() -> impl std::future::Future<Output = ()> {
-    // ---
     use futures::future;
     use tokio::signal::ctrl_c;
     use tokio::signal::unix::{signal, SignalKind};
@@ -85,6 +77,7 @@ fn shutdown_signal() -> impl std::future::Future<Output = ()> {
 
 #[cfg(test)]
 mod tests {
+    // ---
 
     #[tokio::test]
     async fn shutdown_signal_completes() {
