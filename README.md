@@ -131,6 +131,11 @@ Each integration test spins up its own isolated Axum server instance and binds t
         metrics/          # Metrics implementations module
           noop/           # No-op metrics implementation
           prometheus/     # Prometheus metrics implementation
+    scripts/
+      dev-setup.sh        # Development environment setup script
+      run-integration-tests.sh # Integration tests with Docker orchestration
+      run-unit-tests.sh   # Unit tests, linting, and formatting checks
+      test-all.sh         # Complete test suite (same as CI)
     tests/
       integration.rs      # Basic integration tests
       metrics_endpoint.rs # Metrics-specific integration tests
