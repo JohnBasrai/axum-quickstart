@@ -7,6 +7,13 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.2] — 2025-01-XX
+
+### Changed
+- Remove OpenSSL system dependency by disabling reqwest default features
+- Reduces build dependencies and eliminates libssl-dev requirement
+- Integration tests continue to use HTTP for localhost connections
+
 ## [1.3.1] - 2025-06-14
 
 ### Fixed
