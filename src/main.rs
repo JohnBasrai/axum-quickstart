@@ -5,6 +5,8 @@ use std::env;
 use tracing::Level;
 use tracing_subscriber::fmt::format::FmtSpan;
 
+use axum_quickstart::domain::init_database_with_retry_from_env;
+
 // Initialize tracing subscriber
 fn init_tracing() {
     let span_events = match env::var("AXUM_SPAN_EVENTS").as_deref() {
@@ -37,6 +39,7 @@ fn init_tracing() {
 async fn main() -> Result<()> {
     // Initialize tracing subscriber to log to stdout
     init_tracing();
+    init_database_with_retry_from_env().await?;
 
     // Create router with metrics determined by environment variables
     let router = create_router()?;

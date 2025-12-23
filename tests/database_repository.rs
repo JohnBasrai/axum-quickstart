@@ -3,6 +3,19 @@ use axum_quickstart::domain::Credential; // {Credential, Repository, User};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+async fn setup_repo() -> RepositoryPtr {
+    // ---
+
+    use axum_quickstart::domain::create_postgres_repository;
+    use axum_quickstart::domain::init_database_with_retry_from_env;
+
+    init_database_with_retry_from_env()
+        .await
+        .expect("database init failed");
+
+    create_postgres_repository().expect("repository creation failed")
+}
+
 // Helper to get test database URL from environment or use default
 fn get_test_database_url() -> String {
     std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for database tests")

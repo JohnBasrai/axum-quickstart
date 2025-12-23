@@ -1,9 +1,12 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use once_cell::sync::OnceCell;
+use sqlx::{postgres::PgPoolOptions, PgPool};
+use std::sync::Arc;
+use std::time::Duration;
 use uuid::Uuid;
 
-use crate::domain::{Credential, Repository, User};
+use crate::domain::{Credential, Repository, RepositoryPtr, User};
 
 #[derive(sqlx::FromRow)]
 struct UserRow {
@@ -21,9 +24,95 @@ struct CredentialRow {
     created_at: DateTime<Utc>,
 }
 
-pub fn create_postgres_repository(pool: PgPool) -> impl Repository {
+/// Reads an environment variable and parses it into a value, falling back to a default.
+/// Call this function somewhere early in main.rs before launching threads/tasks.
+///
+/// # Parameters
+/// - `$name`: The name of the environment variable (string literal or expression)
+/// - `$default`: A default value (any type that implements `Clone`)
+///
+#[macro_export]
+macro_rules! get_env_with_default {
+    ($ty:ty, $name:expr, $default:expr) => {{
+        std::env::var($name)
+            .map(|val| val.parse::<$ty>().unwrap_or($default))
+            .unwrap_or($default)
+    }};
+}
+
+static DB_POOL: OnceCell<PgPool> = OnceCell::new();
+
+/// Initialize the DB connection pool with retry logic.
+///
+/// Respects env vars:
+/// - `AXUM_DB_RETRY_COUNT` (default: 50)
+/// - `AXUM_DB_RETRY_DELAY_SECS` (default: 1)
+pub async fn init_database_with_retry_from_env() -> Result<()> {
     // ---
-    PostgresRepository::new(pool)
+    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let fname = "init_database_with_retry_from_env";
+
+    if DB_POOL.get().is_some() {
+        tracing::info!("{fname}: Pool is already initialized");
+        return Ok(());
+    }
+
+    tracing::info!("🚨 axum-quickstart attaching to database at: {:?}", url);
+
+    let retry_max = get_env_with_default!(u32, "AXUM_DB_RETRY_COUNT", 50);
+    let delay_sec = get_env_with_default!(u64, "AXUM_DB_RETRY_DELAY_SECS", 1);
+
+    for attempt in 1..=retry_max {
+        // ---
+        match PgPoolOptions::new()
+            .max_connections(5)
+            .acquire_timeout(Duration::from_secs(delay_sec))
+            .connect(&url)
+            .await
+        {
+            Ok(pool) => {
+                // ---
+                if DB_POOL.set(pool).is_err() {
+                    // ---
+
+                    // This would happen only if this function is called from multiple
+                    // threads concurrently which is not supposed to happen since it is
+                    // called early in main, but we handle if it does by just dropping the
+                    // new (2nd) one.
+
+                    tracing::warn!("{fname}: Pool is already initialized");
+                }
+                return Ok(());
+            }
+            Err(e) if attempt == retry_max => {
+                return Err(anyhow!(
+                    "{fname}: Failed to connect to DB after {retry_max} retries: {e}"
+                ));
+            }
+            Err(_) => {
+                let backoff_secs = Duration::from_secs(std::cmp::min(2u64.pow(attempt - 1), 8));
+                tracing::warn!(
+                    "DB not ready (attempt {}/{}) — retrying in {}s...",
+                    attempt,
+                    retry_max,
+                    backoff_secs.as_secs()
+                );
+                tokio::time::sleep(backoff_secs).await;
+            }
+        }
+    }
+    unreachable!("Exhausted retries should already have returned above")
+}
+
+pub fn create_postgres_repository() -> Result<RepositoryPtr> {
+    // ---
+    let pool = DB_POOL
+        .get()
+        .expect("Pool not initialized. Call init_pool_with_retry() first.");
+
+    let rep = PostgresRepository::new(pool.clone());
+    Ok(Arc::new(rep))
 }
 
 pub struct PostgresRepository {
