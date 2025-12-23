@@ -82,12 +82,12 @@ jobs:
       run: cargo fmt -- --check
     
     - name: Run clippy
-      run: cargo clippy -- -D warnings
+      run: cargo clippy --quiet -- -D warnings
     
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --quiet
     
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --quiet
       env:
         RUST_LOG: debug
