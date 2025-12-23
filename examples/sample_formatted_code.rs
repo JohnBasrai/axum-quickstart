@@ -87,14 +87,14 @@ impl Metrics for PrometheusMetrics {
     fn increment_counter(&self, name: &str, value: u64) {
         // ---
         if self.enabled {
-            println!("Counter '{}' incremented by {}", name, value);
+            println!("Counter '{name}' incremented by {value}");
         }
     }
 
     fn record_histogram(&self, name: &str, value: f64) {
         // ---
         if self.enabled {
-            println!("Histogram '{}' recorded value {}", name, value);
+            println!("Histogram '{name}' recorded value {value}");
         }
     }
 }
@@ -169,7 +169,7 @@ pub fn complex_function_with_many_parameters(
 ) -> Result<String, Box<dyn std::error::Error>> {
     // ---
     let result = if third_param {
-        format!("{}-{}", first_param, second_param)
+        format!("{first_param}-{second_param}")
     } else {
         "disabled".to_string()
     };
@@ -207,12 +207,12 @@ fn main() {
 
     // Test helper functions
     let formatted_name = helpers::format_metric_name("test-metric-name");
-    println!("🔧 Formatted metric name: {}", formatted_name);
+    println!("🔧 Formatted metric name: {formatted_name}");
 
     // Test validation
     match helpers::validate_metric_value(42.5) {
-        Ok(value) => println!("✅ Valid metric value: {}", value),
-        Err(error) => println!("❌ Invalid metric value: {}", error),
+        Ok(value) => println!("✅ Valid metric value: {value}"),
+        Err(error) => println!("❌ Invalid metric value: {error}"),
     }
 
     // Test complex function
@@ -222,8 +222,8 @@ fn main() {
         true,
         Some("override".to_string()),
     ) {
-        Ok(result) => println!("🎯 Complex function result: {}", result),
-        Err(error) => println!("❌ Complex function error: {}", error),
+        Ok(result) => println!("🎯 Complex function result: {result}"),
+        Err(error) => println!("❌ Complex function error: {error}"),
     }
 
     println!("🎉 Style guide example completed!");
