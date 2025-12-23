@@ -5,16 +5,15 @@ use uuid::Uuid;
 
 // Helper to get test database URL from environment or use default
 fn get_test_database_url() -> String {
-    // ---
-    std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://postgres:postgres@localhost:5432/axum_quickstart_test".to_string()
-    })
+    std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for database tests")
 }
 
 // Helper to setup test database and run migrations
 async fn setup_test_db() -> PgPool {
     // ---
     let database_url = get_test_database_url();
+
+    println!("Using DATABASE_URL={database_url}");
 
     // Connect to database
     let pool = PgPool::connect(&database_url)
