@@ -36,6 +36,16 @@ It includes:
 - **Structured logging**: Configurable log levels and tracing
 - **Health monitoring**: Redis connectivity checks
 
+### WebAuthn/Passkey Authentication (In Progress)
+Modern passwordless authentication using passkeys (biometrics, hardware keys, platform authenticators).
+
+**Phase 1: Database Infrastructure** ✅ Complete
+- PostgreSQL repository layer for credential storage
+- User and credential domain models
+- Clean architecture with Repository pattern
+
+See [WebAuthn Architecture](docs/webauthn-architecture.md) for detailed design and implementation roadmap.
+
 ---
 
 ## Configuration
@@ -112,33 +122,6 @@ This will run:
 
 Each integration test spins up its own isolated Axum server instance and binds to a random port, allowing tests to run concurrently without conflict.
 
----
-
-## Project Structure
-
-    src/
-      lib.rs              # Application setup and router creation
-      main.rs             # Server startup entry point
-      app_state.rs        # Shared application state
-      domain/             # Business logic and abstractions
-        metrics.rs        # Metrics trait definition
-      handlers/           # Route handlers
-        movies.rs         # Movie CRUD operations
-        health.rs         # Health check endpoints
-        metrics.rs        # Metrics endpoint
-        root.rs           # Landing page
-      infrastructure/     # External service implementations
-        metrics/          # Metrics implementations module
-          noop/           # No-op metrics implementation
-          prometheus/     # Prometheus metrics implementation
-    scripts/
-      dev-setup.sh        # Development environment setup script
-      run-integration-tests.sh # Integration tests with Docker orchestration
-      run-unit-tests.sh   # Unit tests, linting, and formatting checks
-      test-all.sh         # Complete test suite (same as CI)
-    tests/
-      integration.rs      # Basic integration tests
-      metrics_endpoint.rs # Metrics-specific integration tests
 ---
 
 ## Architecture
