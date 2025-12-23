@@ -24,26 +24,22 @@ impl Repository for PostgresRepository {
         // ---
         let user = User::new(username.to_string());
 
-        sqlx::query(
-            "INSERT INTO users (id, username, created_at) VALUES ($1, $2, $3)"
-        )
-        .bind(user.id)
-        .bind(&user.username)
-        .bind(user.created_at)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("INSERT INTO users (id, username, created_at) VALUES ($1, $2, $3)")
+            .bind(user.id)
+            .bind(&user.username)
+            .bind(user.created_at)
+            .execute(&self.pool)
+            .await?;
 
         Ok(user)
     }
 
     async fn get_user_by_username(&self, username: &str) -> Result<Option<User>> {
         // ---
-        let result = sqlx::query(
-            "SELECT id, username, created_at FROM users WHERE username = $1"
-        )
-        .bind(username)
-        .fetch_optional(&self.pool)
-        .await?;
+        let result = sqlx::query("SELECT id, username, created_at FROM users WHERE username = $1")
+            .bind(username)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(result.map(|row| User {
             id: row.get("id"),
@@ -54,12 +50,10 @@ impl Repository for PostgresRepository {
 
     async fn get_user_by_id(&self, user_id: Uuid) -> Result<Option<User>> {
         // ---
-        let result = sqlx::query(
-            "SELECT id, username, created_at FROM users WHERE id = $1"
-        )
-        .bind(user_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let result = sqlx::query("SELECT id, username, created_at FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(result.map(|row| User {
             id: row.get("id"),
@@ -108,7 +102,7 @@ impl Repository for PostgresRepository {
     async fn get_credential_by_id(&self, credential_id: &[u8]) -> Result<Option<Credential>> {
         // ---
         let result = sqlx::query(
-            "SELECT id, user_id, public_key, counter, created_at FROM credentials WHERE id = $1"
+            "SELECT id, user_id, public_key, counter, created_at FROM credentials WHERE id = $1",
         )
         .bind(credential_id)
         .fetch_optional(&self.pool)
@@ -125,14 +119,12 @@ impl Repository for PostgresRepository {
 
     async fn update_credential(&self, credential: Credential) -> Result<()> {
         // ---
-        sqlx::query(
-            "UPDATE credentials SET public_key = $1, counter = $2 WHERE id = $3"
-        )
-        .bind(&credential.public_key)
-        .bind(credential.counter)
-        .bind(&credential.id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE credentials SET public_key = $1, counter = $2 WHERE id = $3")
+            .bind(&credential.public_key)
+            .bind(credential.counter)
+            .bind(&credential.id)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
@@ -140,9 +132,9 @@ impl Repository for PostgresRepository {
     async fn delete_credential(&self, credential_id: &[u8]) -> Result<()> {
         // ---
         sqlx::query("DELETE FROM credentials WHERE id = $1")
-        .bind(credential_id)
-        .execute(&self.pool)
-        .await?;
+            .bind(credential_id)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }

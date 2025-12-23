@@ -29,16 +29,16 @@ pub struct Credential {
     // ---
     /// Unique credential ID (from authenticator)
     pub id: Vec<u8>,
-    
+
     /// User this credential belongs to
     pub user_id: Uuid,
-    
+
     /// Public key for signature verification
     pub public_key: Vec<u8>,
-    
+
     /// Signature counter (for replay attack prevention)
     pub counter: i32,
-    
+
     /// When this credential was created
     pub created_at: DateTime<Utc>,
 }

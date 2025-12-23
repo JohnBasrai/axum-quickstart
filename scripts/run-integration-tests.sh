@@ -33,7 +33,7 @@ fi
 
 # Start services
 echo "🐳 Starting Docker services..."
-docker compose up -d redis
+docker compose up -d redis postgres
 
 # Wait for Redis to be ready
 echo "⏳ Waiting for Redis to be ready..."
@@ -53,13 +53,41 @@ done
 
 echo "✅ Redis is ready!"
 
+# Wait for PostgreSQL to be ready
+echo "⏳ Waiting for PostgreSQL to be ready..."
+counter=0
+
+while ! docker compose exec postgres pg_isready -U postgres > /dev/null 2>&1; do
+    if [ $counter -ge $timeout ]; then
+        echo "❌ PostgreSQL failed to start within $timeout seconds"
+        docker compose logs postgres
+        exit 1
+    fi
+    echo "Waiting for PostgreSQL... ($counter/$timeout)"
+    sleep 1
+    counter=$((counter + 1))
+done
+
+echo "✅ PostgreSQL is ready!"
+
+# Run database migrations
+echo "📦 Running database migrations..."
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/axum_quickstart_test"
+if command -v sqlx &> /dev/null; then
+    sqlx migrate run
+else
+    echo "⚠️  sqlx-cli not installed. Install with: cargo install sqlx-cli --no-default-features --features postgres"
+    echo "Attempting to continue without migrations (tests will fail if migrations are required)..."
+fi
+
 # Build the project
 echo "🔨 Building project..."
-cargo build
+cargo build --quiet
 
 # Run integration tests
 echo "🧪 Running integration tests..."
-RUST_LOG=debug cargo test -- --test-threads 1 --test integration      -- --nocapture
-RUST_LOG=debug cargo test -- --test-threads 1 --test metrics_endpoint -- --nocapture
+RUST_LOG=debug cargo test --quiet -- --test-threads 1 --test integration      -- --nocapture
+RUST_LOG=debug cargo test --quiet -- --test-threads 1 --test metrics_endpoint -- --nocapture
+RUST_LOG=debug cargo test --quiet -- --test-threads 1 --test database_repository -- --nocapture
 
 echo "✅ Integration tests completed successfully!"

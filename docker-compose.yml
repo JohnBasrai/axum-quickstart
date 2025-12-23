@@ -12,6 +12,22 @@ services:
       timeout: 3s
       retries: 5
 
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: axum_quickstart_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # Optional: Redis Commander for debugging
   redis-commander:
     image: rediscommander/redis-commander:latest
@@ -38,4 +54,5 @@ services:
 
 volumes:
   redis_data:
+  postgres_data:
   # grafana_data:
