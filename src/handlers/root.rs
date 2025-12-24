@@ -79,8 +79,7 @@ Available endpoints:
   </div>
 </body>
 </html>
-"#,
-        version = version
+"#
     ));
 
     // Record metrics for the root handler

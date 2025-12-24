@@ -86,7 +86,7 @@ async fn metrics_endpoint_with_prometheus() {
     let body = res.text().await.unwrap();
 
     // Debug: print the body to see what we're getting
-    println!("Metrics response body: '{}'", body);
+    println!("Metrics response body: '{body}'");
 
     // The metrics endpoint should return some content
     assert!(!body.is_empty(), "Metrics should not be empty");
@@ -97,7 +97,7 @@ async fn metrics_endpoint_with_prometheus() {
         println!("✅ Detected Prometheus format metrics");
     } else {
         // Might be a different format or no metrics yet
-        println!("ℹ️  Metrics format: {}", body);
+        println!("ℹ️  Metrics format: {body}");
     }
 
     // Clean up environment variable
@@ -137,7 +137,7 @@ async fn metrics_endpoint_with_noop() {
     );
 
     let body = res.text().await.unwrap();
-    println!("Noop metrics response: '{}'", body);
+    println!("Noop metrics response: '{body}'");
 
     // Clean up environment variable
     std::env::remove_var("AXUM_METRICS_TYPE");
@@ -176,8 +176,7 @@ async fn metrics_endpoint_survives_load() {
         }
         assert!(
             response.status().is_success(),
-            "Request {} should return success",
-            i
+            "Request {i} should return success"
         );
     }
 
@@ -214,7 +213,7 @@ async fn metrics_content_type_is_correct() {
 
     // Check content type
     let content_type = res.headers().get("content-type");
-    println!("Metrics content-type: {:?}", content_type);
+    println!("Metrics content-type: {content_type:?}");
 
     // Prometheus metrics should have text/plain content type
     // Note: Your implementation might use a different content type
@@ -224,8 +223,7 @@ async fn metrics_content_type_is_correct() {
             ct_str.contains("text/plain")
                 || ct_str.contains("text/")
                 || ct_str.contains("application/"),
-            "Content type should be appropriate for metrics: {}",
-            ct_str
+            "Content type should be appropriate for metrics: {ct_str}"
         );
     }
 

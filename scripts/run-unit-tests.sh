@@ -30,10 +30,10 @@ fi
 
 # Build the project
 echo "🔨 Building project..."
-cargo build --verbose
+cargo build --quiet
 
 # Run unit tests
 echo "🧪 Running unit tests..."
-cargo test --lib --verbose
+cargo test --lib -- --skip infrastructure::database
 
 echo "✅ Unit tests completed successfully!"

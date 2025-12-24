@@ -12,11 +12,15 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 echo "🚀 Starting integration test suite..."
 echo "Project root: $PROJECT_ROOT"
 
+exit_status=1
+
 # Function to cleanup on exit
 cleanup() {
-    echo "🧹 Cleaning up..."
+    echo "🧹 Cleaning up... $exit_status"
+    set -x
     cd "$PROJECT_ROOT"
-    docker compose down -v --remove-orphans || true
+    docker compose down -v --remove-orphans
+    exit $exit_status
 }
 
 # Set trap to cleanup on script exit
@@ -33,7 +37,7 @@ fi
 
 # Start services
 echo "🐳 Starting Docker services..."
-docker compose up -d redis
+docker compose up -d redis postgres
 
 # Wait for Redis to be ready
 echo "⏳ Waiting for Redis to be ready..."
@@ -53,13 +57,72 @@ done
 
 echo "✅ Redis is ready!"
 
+# Wait for PostgreSQL to be ready
+echo "⏳ Waiting for PostgreSQL to be ready..."
+counter=0
+
+while ! docker compose exec postgres pg_isready -U postgres > /dev/null 2>&1; do
+    if [ $counter -ge $timeout ]; then
+        echo "❌ PostgreSQL failed to start within $timeout seconds"
+        docker compose logs postgres
+        exit 1
+    fi
+    echo "Waiting for PostgreSQL... ($counter/$timeout)"
+    sleep 1
+    counter=$((counter + 1))
+done
+
+echo "✅ PostgreSQL is ready!"
+
+# Run database migrations
+echo "📦 Running database migrations..."
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/axum_quickstart_test"
+if command -v sqlx &> /dev/null; then
+    sqlx migrate run
+else
+    echo "⚠️  sqlx-cli not installed. Install with: cargo install sqlx-cli --no-default-features --features postgres"
+    echo "Attempting to continue without migrations (tests will fail if migrations are required)..."
+fi
+
 # Build the project
 echo "🔨 Building project..."
-cargo build
+cargo build --quiet
 
 # Run integration tests
 echo "🧪 Running integration tests..."
-RUST_LOG=debug cargo test -- --test-threads 1 --test integration      -- --nocapture
-RUST_LOG=debug cargo test -- --test-threads 1 --test metrics_endpoint -- --nocapture
+
+QUIET="--quiet"
+QUIET=""
+
+docker compose ps
+
+echo "------------------------------------------------"
+echo "---------------- integration tests -------------"
+echo "------------------------------------------------"
+RUST_LOG=debug cargo test ${QUIET} --test integration -- --nocapture
+
+echo "------------------------------------------------"
+echo "---------------- metrics_endpoint tests --------"
+echo "------------------------------------------------"
+RUST_LOG=debug cargo test ${QUIET} --test metrics_endpoint -- --nocapture
+
+echo "------------------------------------------------"
+echo "---------------- database::postgres_repository tests"
+echo "------------------------------------------------"
+RUST_LOG=debug cargo test --lib ${QUIET} -- infrastructure::database::postgres_repository \
+  --nocapture
+
+docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_statement = 'all';"
+docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_connections = 'on';"
+docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_disconnections = 'on';"
+docker compose exec postgres psql -U postgres -c "SELECT pg_reload_conf();"
+
+(docker compose logs postgres --tail 50 --follow >& postgres.log&)
+
+echo "------------------------------------------------"
+echo "---------------- database::tests ---------------"
+echo "------------------------------------------------"
+RUST_LOG=debug cargo test --lib ${QUIET} -- infrastructure::database::tests --nocapture
 
 echo "✅ Integration tests completed successfully!"
+exit_status=0

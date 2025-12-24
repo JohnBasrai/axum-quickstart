@@ -22,7 +22,7 @@ mod handlers;
 mod infrastructure;
 
 // Publicly expose the infrastructure creation functions
-pub use infrastructure::{create_noop_metrics, create_prom_metrics};
+pub use infrastructure::{create_noop_metrics, create_postgres_repository, create_prom_metrics};
 
 /// Build the HTTP router with metrics implementation determined by environment variables.
 pub fn create_router() -> Result<Router> {
