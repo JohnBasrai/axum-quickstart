@@ -34,6 +34,6 @@ cargo build --quiet
 
 # Run unit tests
 echo "🧪 Running unit tests..."
-cargo test --lib --quiet
+cargo test --lib -- --skip infrastructure::database
 
 echo "✅ Unit tests completed successfully!"

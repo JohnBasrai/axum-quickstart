@@ -3,8 +3,6 @@
 # dev-setup.sh
 # Development environment setup script
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
@@ -46,7 +44,8 @@ rustup component add rustfmt clippy
 
 # Start Docker services for development
 echo "🐳 Starting development services..."
-docker compose up -d redis
+docker compose up -d
+docker compose ps
 
 echo "✅ Development environment is ready!"
 echo ""
@@ -59,3 +58,4 @@ echo "  docker compose down              - Stop all services"
 echo "  docker compose logs redis        - View Redis logs"
 echo ""
 echo "To run with Redis Commander (GUI): docker compose --profile debug up -d"
+PS1="(dev-env) : "

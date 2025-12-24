@@ -95,7 +95,11 @@ Then visit:
 Use the provided test scripts for convenience:
 
 ```bash
-./scripts/test-all.sh  # Complete test suite (same as CI)
+$ bash 								# 1) Start a child shell
+(dev-env) : . scripts/dev-setup.sh	# 2) Set up dev env
+(dev-env) : . scripts/test-all.sh	# 3) Runs complete test suite (same as CI)
+$ bash
+# 
 ```
 
 ### Manual Testing

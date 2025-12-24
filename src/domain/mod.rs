@@ -13,5 +13,3 @@ pub async fn init_database_with_retry_from_env() -> anyhow::Result<()> {
     // ---
     crate::infrastructure::init_database_with_retry_from_env().await
 }
-
-pub use infrastructure::database::create_postgres_repository;

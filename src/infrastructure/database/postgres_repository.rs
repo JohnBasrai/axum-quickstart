@@ -61,13 +61,15 @@ pub async fn init_database_with_retry_from_env() -> Result<()> {
     tracing::info!("🚨 axum-quickstart attaching to database at: {:?}", url);
 
     let retry_max = get_env_with_default!(u32, "AXUM_DB_RETRY_COUNT", 50);
-    let delay_sec = get_env_with_default!(u64, "AXUM_DB_RETRY_DELAY_SECS", 1);
+    let acquire_timeout_sec = get_env_with_default!(u64, "AXUM_DB_ACQUIRE_TIMEOUT_SEC", 30);
 
     for attempt in 1..=retry_max {
         // ---
         match PgPoolOptions::new()
-            .max_connections(5)
-            .acquire_timeout(Duration::from_secs(delay_sec))
+            .max_connections(15) // TODO make this a config item.
+            .min_connections(2)
+            //.test_before_acquire(true)
+            .acquire_timeout(Duration::from_secs(acquire_timeout_sec))
             .connect(&url)
             .await
         {
@@ -124,6 +126,12 @@ impl PostgresRepository {
     // ---
     pub fn new(pool: PgPool) -> Self {
         // ---
+        tracing::debug!(
+            "POOL STATE before test: size={}, idle={}",
+            pool.size(),
+            pool.num_idle()
+        );
+
         Self { pool }
     }
 }
@@ -255,5 +263,89 @@ impl Repository for PostgresRepository {
             .await?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod schema_tests {
+    // ---
+    // use super::*;
+    use sqlx::PgPool;
+    use std::env;
+    use uuid::Uuid;
+
+    async fn test_pool() -> PgPool {
+        // ---
+
+        let database_url =
+            env::var("DATABASE_URL").expect("DATABASE_URL must be set for database schema tests");
+
+        tracing::info!("Connecting to DATABASE_URL:{database_url}");
+
+        PgPool::connect(&database_url)
+            .await
+            .expect("Failed to connect to test database")
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn users_delete_cascades_credentials() {
+        // ---
+        let pool = test_pool().await;
+
+        let user_id = Uuid::new_v4();
+        let credential_id: Vec<u8> = vec![1, 2, 3, 4];
+
+        // Insert user (raw SQL)
+        sqlx::query(
+            "INSERT INTO users (id, username, created_at)
+             VALUES ($1, $2, NOW())",
+        )
+        .bind(user_id)
+        .bind("cascade_test_user")
+        .execute(&pool)
+        .await
+        .expect("Failed to insert user");
+
+        // Insert credential (raw SQL)
+        sqlx::query(
+            "INSERT INTO credentials (id, user_id, public_key, counter, created_at)
+             VALUES ($1, $2, $3, $4, NOW())",
+        )
+        .bind(&credential_id)
+        .bind(user_id)
+        .bind(vec![9u8, 9, 9]) // ✅ Vec<u8> explicit
+        .bind(0_i32)
+        .execute(&pool)
+        .await
+        .expect("Failed to insert credential");
+
+        // Sanity check: credential exists
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM credentials WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .expect("Failed to count credentials");
+
+        assert_eq!(count, 1);
+
+        // Delete user (raw SQL)
+        sqlx::query("DELETE FROM users WHERE id = $1")
+            .bind(user_id)
+            .execute(&pool)
+            .await
+            .expect("Failed to delete user");
+
+        // Verify cascade delete
+        let remaining: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM credentials WHERE user_id = $1")
+                .bind(user_id)
+                .fetch_one(&pool)
+                .await
+                .expect("Failed to verify cascade delete");
+
+        assert_eq!(
+            remaining, 0,
+            "credentials should be deleted via ON DELETE CASCADE"
+        );
     }
 }
