@@ -68,7 +68,7 @@ pub async fn root_handler(State(state): State<AppState>) -> impl IntoResponse {
     </p>
     <pre><code>
 Available endpoints:
-  - GET    /movies/get/{{id}}     Fetch a movie by ID
+  - GET    /movies/get/{{id}}       Fetch a movie by ID
   - POST   /movies/add            Add a new movie entry
   - PUT    /movies/update         Update a movie entry by ID
   - DELETE /movies/delete         Delete a movie entry by ID
