@@ -7,7 +7,33 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [1.3.2] — 2025-01-XX
+## [1.3.3] - 2025-12-23
+
+### Added
+- **Phase 1: WebAuthn Database Infrastructure (Issue #24)**
+  - PostgreSQL container and docker-compose configuration
+  - SQLx migrations for `users` and `credentials` tables
+  - Repository trait abstraction in domain layer  
+  - PostgresRepository implementation with full CRUD operations
+  - Comprehensive integration test suite (9 tests, 0.17s execution)
+  - Shared tokio Runtime for database tests (enables concurrent execution)
+  - Connection pool configuration (min=2, max=15 connections)
+  - Design documentation: `docs/webauthn-architecture.md`
+  - CI: GitHub Actions services for PostgreSQL and Redis
+  - CI: Rust toolchain pinned to 1.88 (sqlx-cli compatibility)
+
+### Technical Details
+- Database schema supports multi-device passkeys (multiple credentials per user)
+- Replay attack prevention via credential counter
+- CASCADE delete from users to credentials
+- Test suite executes in 0.17s with concurrent support
+
+### Dependencies
+- Added: `sqlx` (PostgreSQL feature), `uuid`, `async-trait`
+
+Part of WebAuthn implementation (Startup Package 2).
+
+## [1.3.2] — 2025-01-22
 
 ### Changed
 - Remove OpenSSL system dependency by disabling reqwest default features
