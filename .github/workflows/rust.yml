@@ -10,6 +10,7 @@ env:
   CARGO_TERM_COLOR: always
   DATABASE_URL: postgres://postgres:postgres@localhost:5432/axum_quickstart_test
   REDIS_URL: redis://localhost:6379
+  RUST_LOG: info
 
 jobs:
   test:
@@ -89,5 +90,3 @@ jobs:
     
     - name: Run tests
       run: cargo test --quiet
-      env:
-        RUST_LOG: debug
