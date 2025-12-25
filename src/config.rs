@@ -244,88 +244,104 @@ pub use webauthn::WebAuthnConfig;
 // ============================================================
 // Tests
 // ============================================================
-
+//
 #[cfg(test)]
 mod tests {
     // ---
     use super::*;
-    use anyhow::Result;
     use serial_test::serial;
 
-    #[test]
-    #[serial]
-    fn missing_database_url_fails() -> Result<()> {
-        // ---
-        let prev = std::env::var("DATABASE_URL").ok();
-        std::env::remove_var("DATABASE_URL");
+    // These tests intentionally mutate process-global environment variables so they
+    // must run serially to avoid race conditions. Env state is restored per test to
+    // prevent leakage.
 
-        assert_missing_config!(database::DatabaseConfig::from_env(), "DATABASE_URL");
+    // Test helper to run a test by saving and restoring existing env
+    fn run_with_env_restored<F>(the_test: F)
+    where
+        F: FnOnce(),
+    {
+        let name = "DATABASE_URL";
+        let prev = std::env::var(name).ok();
+
+        // Run the test
+        the_test();
 
         // restore previous value
         match prev {
-            Some(v) => std::env::set_var("DATABASE_URL", v),
-            None => std::env::remove_var("DATABASE_URL"),
+            Some(v) => std::env::set_var(name, v),
+            None => std::env::remove_var(name),
         }
-
-        Ok(())
     }
 
     #[test]
     #[serial]
-    fn database_defaults_applied() -> Result<()> {
+    fn missing_database_url_fails() {
         // ---
-        let db_url = "postgres://test";
-        std::env::set_var("DATABASE_URL", db_url); // requried
-
-        std::env::remove_var("AXUM_DB_RETRY_COUNT");
-        std::env::remove_var("AXUM_DB_ACQUIRE_TIMEOUT_SEC");
-        std::env::remove_var("AXUM_DB_MIN_CONNECTIONS");
-        std::env::remove_var("AXUM_DB_MAX_CONNECTIONS");
-
-        let cfg = database::DatabaseConfig::from_env()?;
-        assert_eq!(cfg.database_url, db_url);
-        assert_eq!(cfg.retry_count, 50);
-        assert_eq!(cfg.acquire_timeout.as_secs(), 30);
-        assert_eq!(cfg.min_connections, 2);
-        assert_eq!(cfg.max_connections, 15);
-
-        Ok(())
+        run_with_env_restored(|| {
+            std::env::remove_var("DATABASE_URL");
+            assert_missing_config!(database::DatabaseConfig::from_env(), "DATABASE_URL");
+        });
     }
 
     #[test]
     #[serial]
-    fn database_overrides_defaults() -> Result<()> {
+    fn database_defaults_applied() {
         // ---
+        run_with_env_restored(|| {
+            // ---
+            let db_url = "postgres://test";
+            std::env::set_var("DATABASE_URL", db_url); // requried
 
-        let db_url = "postgres://test";
-        std::env::set_var("DATABASE_URL", db_url);
-        std::env::set_var("AXUM_DB_RETRY_COUNT", "3");
-        std::env::set_var("AXUM_DB_ACQUIRE_TIMEOUT_SEC", "5");
-        std::env::set_var("AXUM_DB_MIN_CONNECTIONS", "10");
-        std::env::set_var("AXUM_DB_MAX_CONNECTIONS", "1000");
+            std::env::remove_var("AXUM_DB_RETRY_COUNT");
+            std::env::remove_var("AXUM_DB_ACQUIRE_TIMEOUT_SEC");
+            std::env::remove_var("AXUM_DB_MIN_CONNECTIONS");
+            std::env::remove_var("AXUM_DB_MAX_CONNECTIONS");
 
-        let cfg = database::DatabaseConfig::from_env()?;
-        assert_eq!(cfg.retry_count, 3);
-        assert_eq!(cfg.acquire_timeout.as_secs(), 5);
-        assert_eq!(cfg.database_url, db_url);
-        assert_eq!(cfg.min_connections, 10);
-        assert_eq!(cfg.max_connections, 1000);
+            let cfg = database::DatabaseConfig::from_env().unwrap();
 
-        Ok(())
+            assert_eq!(cfg.database_url, db_url);
+            assert_eq!(cfg.retry_count, 50);
+            assert_eq!(cfg.acquire_timeout.as_secs(), 30);
+            assert_eq!(cfg.min_connections, 2);
+            assert_eq!(cfg.max_connections, 15);
+        });
     }
 
     #[test]
     #[serial]
-    fn app_config_from_env_success() -> Result<()> {
+    fn database_overrides_defaults() {
         // ---
-        std::env::set_var("DATABASE_URL", "postgres://test");
-        std::env::set_var("REDIS_URL", "redis://localhost");
-        std::env::set_var("AXUM_WEBAUTHN_RP_ID", "example.com");
-        std::env::set_var("AXUM_WEBAUTHN_ORIGIN", "https://example.com");
+        run_with_env_restored(|| {
+            // ---
+            let db_url = "postgres://test";
+            std::env::set_var("DATABASE_URL", db_url);
+            std::env::set_var("AXUM_DB_RETRY_COUNT", "3");
+            std::env::set_var("AXUM_DB_ACQUIRE_TIMEOUT_SEC", "5");
+            std::env::set_var("AXUM_DB_MIN_CONNECTIONS", "10");
+            std::env::set_var("AXUM_DB_MAX_CONNECTIONS", "1000");
 
-        let cfg = AppConfig::from_env()?;
-        assert_eq!(cfg.webauthn.rp_name, "Axum Quickstart");
+            let cfg = database::DatabaseConfig::from_env().unwrap();
+            assert_eq!(cfg.retry_count, 3);
+            assert_eq!(cfg.acquire_timeout.as_secs(), 5);
+            assert_eq!(cfg.database_url, db_url);
+            assert_eq!(cfg.min_connections, 10);
+            assert_eq!(cfg.max_connections, 1000);
+        });
+    }
 
-        Ok(())
+    #[test]
+    #[serial]
+    fn app_config_from_env_success() {
+        // ---
+        run_with_env_restored(|| {
+            // ---
+            std::env::set_var("DATABASE_URL", "postgres://test");
+            std::env::set_var("REDIS_URL", "redis://localhost");
+            std::env::set_var("AXUM_WEBAUTHN_RP_ID", "example.com");
+            std::env::set_var("AXUM_WEBAUTHN_ORIGIN", "https://example.com");
+
+            let cfg = AppConfig::from_env().unwrap();
+            assert_eq!(cfg.webauthn.rp_name, "Axum Quickstart");
+        })
     }
 }
