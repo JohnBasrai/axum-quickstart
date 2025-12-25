@@ -17,7 +17,7 @@ cd "$PROJECT_ROOT"
 
 # Run clippy
 echo "📎 Running Clippy (linter)..."
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --all-targets --all-features --no-deps -- -D warnings
 
 # Check formatting
 echo "🎨 Checking code formatting..."
