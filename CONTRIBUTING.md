@@ -104,3 +104,47 @@ cargo run --example formatting_style_guide
 ### Configuration
 
 The project's formatting rules are defined in `rustfmt.toml`. This ensures consistent formatting across all contributors and CI environments.
+
+## Documentation and Doc Comments
+
+This project follows a **production-grade documentation standard** for Rust code.
+
+### Required Doc Comments
+
+Use Rust doc comments (`///`) for:
+
+- Public structs
+- Public enums
+- Public functions
+- Public modules that define architectural boundaries
+- Macros that encode non-obvious behavior or policy decisions
+
+Doc comments should describe **intent, guarantees, and failure semantics** —
+not restate what the code obviously does.
+
+### Optional (Encouraged) Doc Comments
+
+Doc comments or short block comments are encouraged for:
+
+- Internal functions with security or operational implications
+- Startup and initialization logic
+- Configuration parsing and validation
+- Code that enforces invariants or policy decisions
+
+### Not Required
+
+Doc comments are not required for:
+
+- Trivial helpers
+- Simple getters or pass-through functions
+- Test code (assert messages should be sufficient)
+- Obvious glue code
+
+### General Guidance
+
+- Prefer documenting *why* over *how*
+- Be explicit about failure behavior
+- Keep comments accurate and up to date
+- Avoid over-documenting trivial code
+
+Well-written doc comments are considered part of the code’s correctness.

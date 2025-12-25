@@ -76,7 +76,6 @@ echo "✅ PostgreSQL is ready!"
 
 # Run database migrations
 echo "📦 Running database migrations..."
-export DATABASE_URL="postgres://postgres:postgres@localhost:5432/axum_quickstart_test"
 if command -v sqlx &> /dev/null; then
     sqlx migrate run
 else

@@ -138,6 +138,7 @@ This README will be updated again **after Phase 2 is complete**.
 | Variable | Default | Description |
 |:---------|:--------|:------------|
 | `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection string |
+| `DATABASE_URL` | see devsetup script | Redis connection string |
 | `API_BIND_ADDR` | `127.0.0.1:8080` | Server bind address |
 | `AXUM_METRICS_TYPE` | `noop` | Metrics backend (`prom` or `noop`) |
 | `AXUM_LOG_LEVEL` | `debug` | Log level (`trace`, `debug`, `info`, `warn`, `error`) |
@@ -166,6 +167,7 @@ cargo install sqlx-cli --no-default-features --features postgres
 ### Start Dependencies
 
 ```bash
+. scripts/dev-setup.sh
 docker compose up -d
 ```
 
@@ -173,10 +175,10 @@ Ensure PostgreSQL and Redis are healthy.
 
 ---
 
-### Run Migrations
+### Start services
 
 ```bash
-sqlx migrate run
+source ./scripts/startup.sh
 ```
 
 ---
@@ -187,25 +189,13 @@ sqlx migrate run
 cargo run
 ```
 
-### The output of the above steps should look something like this.
+---
 
-```
-bash $ docker compose up -d
-[+] Running 2/2
- ✔ Container axum-quickstart-redis-1     Running                                                                                                     0.0s 
- ✔ Container axum-quickstart-postgres-1  Running                                                                                                     0.0s 
-bash $ sqlx migrate run
-Applied 20250101000001/migrate create users table (11.473996ms)
-Applied 20250101000002/migrate create credentials table (15.291935ms)
-bash $ cargo run
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.16s
-     Running `target/debug/axum-quickstart`
-2025-12-24T19:48:26.198948Z  INFO axum_quickstart::infrastructure::database::postgres_repository: src/infrastructure/database/postgres_repository.rs:61: 🚨 axum-quickstart attaching to database at: "postgres://postgres:postgres@localhost:5432/axum_quickstart_test"
-2025-12-24T19:48:26.257727Z  INFO axum_quickstart: src/main.rs:51: Starting axum server 1.3.3 on endpoint:127.0.0.1:8080
-^C2025-12-24T19:48:32.693051Z  INFO axum_quickstart: src/main.rs:68: Caught Control-C. Closing server gracefully...
-bash $ █
-```
+### Stop all services
 
+```bash
+./scripts/shutdown.sh
+```
 ---
 
 ## Testing
@@ -213,6 +203,7 @@ bash $ █
 ### Full Test Suite (Recommended)
 
 ```bash
+source ./scripts/startup.sh
 ./scripts/test-all.sh
 ```
 

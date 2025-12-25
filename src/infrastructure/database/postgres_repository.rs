@@ -1,3 +1,4 @@
+use crate::DatabaseConfig;
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use once_cell::sync::OnceCell;
@@ -24,22 +25,6 @@ struct CredentialRow {
     created_at: DateTime<Utc>,
 }
 
-/// Reads an environment variable and parses it into a value, falling back to a default.
-/// Call this function somewhere early in main.rs before launching threads/tasks.
-///
-/// # Parameters
-/// - `$name`: The name of the environment variable (string literal or expression)
-/// - `$default`: A default value (any type that implements `Clone`)
-///
-#[macro_export]
-macro_rules! get_env_with_default {
-    ($ty:ty, $name:expr, $default:expr) => {{
-        std::env::var($name)
-            .map(|val| val.parse::<$ty>().unwrap_or($default))
-            .unwrap_or($default)
-    }};
-}
-
 static DB_POOL: OnceCell<PgPool> = OnceCell::new();
 
 /// Initialize the DB connection pool with retry logic.
@@ -49,27 +34,29 @@ static DB_POOL: OnceCell<PgPool> = OnceCell::new();
 /// - `AXUM_DB_RETRY_DELAY_SECS` (default: 1)
 pub async fn init_database_with_retry_from_env() -> Result<()> {
     // ---
-    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-    let fname = "init_database_with_retry_from_env";
 
     if DB_POOL.get().is_some() {
-        tracing::info!("{fname}: Pool is already initialized");
+        tracing::info!("init_database_with_retry_from_env: Pool is already initialized");
         return Ok(());
     }
 
+    init_database_with_retry(&DatabaseConfig::from_env()?).await
+}
+
+async fn init_database_with_retry(cfg: &DatabaseConfig) -> Result<()> {
+    // ---
+    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let fname = "init_database_with_retry";
+
     tracing::info!("🚨 axum-quickstart attaching to database at: {:?}", url);
 
-    let retry_max = get_env_with_default!(u32, "AXUM_DB_RETRY_COUNT", 50);
-    let acquire_timeout_sec = get_env_with_default!(u64, "AXUM_DB_ACQUIRE_TIMEOUT_SEC", 30);
-
-    for attempt in 1..=retry_max {
+    for attempt in 1..=cfg.retry_count {
         // ---
         match PgPoolOptions::new()
-            .max_connections(15) // TODO make this a config item.
-            .min_connections(2)
-            //.test_before_acquire(true)
-            .acquire_timeout(Duration::from_secs(acquire_timeout_sec))
+            .max_connections(cfg.max_connections)
+            .min_connections(cfg.min_connections)
+            .acquire_timeout(cfg.acquire_timeout)
             .connect(&url)
             .await
         {
@@ -87,9 +74,10 @@ pub async fn init_database_with_retry_from_env() -> Result<()> {
                 }
                 return Ok(());
             }
-            Err(e) if attempt == retry_max => {
+            Err(e) if attempt == cfg.retry_count => {
                 return Err(anyhow!(
-                    "{fname}: Failed to connect to DB after {retry_max} retries: {e}"
+                    "{fname}: Failed to connect to DB after {} retries: {e}",
+                    cfg.retry_count
                 ));
             }
             Err(_) => {
@@ -97,7 +85,7 @@ pub async fn init_database_with_retry_from_env() -> Result<()> {
                 tracing::warn!(
                     "DB not ready (attempt {}/{}) — retrying in {}s...",
                     attempt,
-                    retry_max,
+                    cfg.retry_count,
                     backoff_secs.as_secs()
                 );
                 tokio::time::sleep(backoff_secs).await;

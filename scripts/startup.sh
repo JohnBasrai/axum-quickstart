@@ -3,6 +3,8 @@
 # dev-setup.sh
 # Development environment setup script
 
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/axum_quickstart_test"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 

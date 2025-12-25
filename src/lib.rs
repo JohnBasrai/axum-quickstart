@@ -18,8 +18,15 @@ pub mod domain;
 
 // Internal-only exports (sibling access within this module)
 mod app_state;
+mod config;
 mod handlers;
 mod infrastructure;
+
+pub use config::*;
+//b use config::AppConfig;
+//b use config::DatabaseConfig;
+//b use config::RedisConfig;
+//b use config::WebAuthnConfig;
 
 // Publicly expose the infrastructure creation functions
 pub use infrastructure::{create_noop_metrics, create_postgres_repository, create_prom_metrics};
