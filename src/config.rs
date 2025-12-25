@@ -239,7 +239,7 @@ mod webauthn {
         }
     }
 }
-//pub use webauthn::WebAuthnConfig;
+pub use webauthn::WebAuthnConfig;
 
 // ============================================================
 // Tests

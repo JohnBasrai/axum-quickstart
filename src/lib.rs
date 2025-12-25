@@ -23,20 +23,23 @@ mod handlers;
 mod infrastructure;
 
 pub use config::*;
-//b use config::AppConfig;
-//b use config::DatabaseConfig;
-//b use config::RedisConfig;
-//b use config::WebAuthnConfig;
 
 // Publicly expose the infrastructure creation functions
-pub use infrastructure::{create_noop_metrics, create_postgres_repository, create_prom_metrics};
+pub use infrastructure::{
+    create_noop_metrics, // ---
+    create_postgres_repository,
+    create_prom_metrics,
+    create_webauthn,
+};
 
 /// Build the HTTP router with metrics implementation determined by environment variables.
 pub fn create_router() -> Result<Router> {
     // ---
+    // Load all configuration from environment
+    let config = AppConfig::from_env()?;
+
     // Determine metrics implementation from environment
     let metrics_type = env::var("AXUM_METRICS_TYPE").unwrap_or_else(|_| "noop".to_string());
-
     let metrics = if metrics_type == "prom" {
         create_prom_metrics()?
     } else {
@@ -45,10 +48,22 @@ pub fn create_router() -> Result<Router> {
 
     tracing_subscriber::fmt::try_init().ok(); // ✅ Ignores if already initialized
 
-    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-    let redis_client = Client::open(redis_url)?;
-    let app_state = AppState::new(redis_client, metrics);
+    // Create infrastructure dependencies
+    let redis_client = Client::open(config.redis.url.clone())?;
+    let repository = create_postgres_repository()?;
+    let webauthn = std::sync::Arc::new(create_webauthn(&config.webauthn)?);
 
+    // Build application state with all dependencies
+    let app_state = AppState::new(
+        redis_client,
+        metrics,
+        repository,
+        webauthn,
+        config.redis.webauthn_challenge_ttl,
+    );
+
+    // Build router (Phase 2 WebAuthn routes will be added next)
+    //
     let router = Router::new()
         .route("/", get(root_handler))
         .route("/health", get(health_check))
@@ -60,6 +75,18 @@ pub fn create_router() -> Result<Router> {
                 .route("/add", post(add_movie))
                 .route("/update/{id}", put(update_movie))
                 .route("/delete/{id}", delete(delete_movie)),
+        )
+        .nest(
+            "/webauthn",
+            Router::new()
+                .route(
+                    "/register/start",
+                    post(handlers::webauthn_register::register_start),
+                )
+                .route(
+                    "/register/finish",
+                    post(handlers::webauthn_register::register_finish),
+                ),
         )
         .with_state(app_state);
 
