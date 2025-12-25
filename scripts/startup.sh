@@ -3,6 +3,9 @@
 # dev-setup.sh
 # Development environment setup script
 
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/axum_quickstart_test"
+export REDIS_URL="redis://127.0.0.1:6379"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 

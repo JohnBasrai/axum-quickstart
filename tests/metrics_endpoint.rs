@@ -1,55 +1,17 @@
-use axum_quickstart::create_router;
-use reqwest::Client;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 
-struct TestServer {
-    addr: std::net::SocketAddr,
-    client: Client,
-}
-
-impl TestServer {
-    // ---
-    async fn new() -> Self {
-        // ---
-
-        // Enable debug logging only when requested
-        if std::env::var("TEST_DEBUG").is_ok() {
-            std::env::set_var("RUST_LOG", "debug");
-            std::env::set_var("NO_COLOR", "1");
-        }
-
-        let app = create_router().unwrap();
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-
-        // Spawn the server in the background
-        tokio::spawn(async move {
-            axum::serve(listener, app).await.unwrap();
-        });
-
-        // Give the server a moment to start
-        sleep(Duration::from_millis(100)).await;
-
-        let client = Client::new();
-        Self { addr, client }
-    }
-
-    fn url(&self, path: &str) -> String {
-        // ---
-        format!("http://{}{}", self.addr, path)
-    }
-}
+mod common;
 
 #[tokio::test]
-#[serial_test::serial]
 async fn metrics_endpoint_with_prometheus() {
     // ---
     // Set environment to use Prometheus metrics for this test
+    common::setup_test_env().await;
     std::env::set_var("AXUM_METRICS_TYPE", "prom");
 
-    let server = TestServer::new().await;
+    let server = common::TestServer::new().await;
 
     // First, hit some endpoints to generate metrics
     let _ = server
@@ -105,13 +67,13 @@ async fn metrics_endpoint_with_prometheus() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn metrics_endpoint_with_noop() {
     // ---
     // Set environment to use noop metrics (or don't set it)
+    common::setup_test_env().await;
     std::env::set_var("AXUM_METRICS_TYPE", "noop");
 
-    let server = TestServer::new().await;
+    let server = common::TestServer::new().await;
 
     // Hit some endpoints
     let _ = server
@@ -144,12 +106,12 @@ async fn metrics_endpoint_with_noop() {
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn metrics_endpoint_survives_load() {
     // ---
+    common::setup_test_env().await;
     std::env::set_var("AXUM_METRICS_TYPE", "prom");
 
-    let server = Arc::new(TestServer::new().await);
+    let server = Arc::new(common::TestServer::new().await);
 
     // Generate some load
     let futures = (0..20).map(|i| {
@@ -191,17 +153,18 @@ async fn metrics_endpoint_survives_load() {
 
     let body = res.text().await.unwrap();
     assert!(!body.is_empty());
+    println!("Got metrics:{body}");
 
     std::env::remove_var("AXUM_METRICS_TYPE");
 }
 
 #[tokio::test]
-#[serial_test::serial]
 async fn metrics_content_type_is_correct() {
     // ---
+    common::setup_test_env().await;
     std::env::set_var("AXUM_METRICS_TYPE", "prom");
 
-    let server = TestServer::new().await;
+    let server = common::TestServer::new().await;
 
     let res = server
         .client

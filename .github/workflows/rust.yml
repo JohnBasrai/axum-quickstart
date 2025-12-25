@@ -7,9 +7,10 @@ on:
     branches: [ main ]
 
 env:
-  CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: never
   DATABASE_URL: postgres://postgres:postgres@localhost:5432/axum_quickstart_test
   REDIS_URL: redis://localhost:6379
+  RUST_LOG: info
 
 jobs:
   test:
@@ -73,7 +74,7 @@ jobs:
           ${{ runner.os }}-target-
     
     - name: Install sqlx-cli
-      run: cargo install sqlx-cli --no-default-features --features postgres
+      run: cargo install sqlx-cli --quiet --no-default-features --features postgres
     
     - name: Run database migrations
       run: sqlx migrate run
@@ -82,12 +83,10 @@ jobs:
       run: cargo fmt -- --check
     
     - name: Run clippy
-      run: cargo clippy --quiet -- -D warnings
+      run: cargo clippy --quiet --all-targets --all-features --no-deps -- -D warnings
     
     - name: Build
       run: cargo build --quiet
     
     - name: Run tests
-      run: cargo test --quiet
-      env:
-        RUST_LOG: debug
+      run: cargo test --quiet -- --test-threads=1
