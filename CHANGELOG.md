@@ -11,7 +11,7 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Phase 2: WebAuthn Application Integration (Issue #25)**
-  - WebAuthn registration and authentication flows
+  - WebAuthn registration flows
   - Redis-backed challenge storage with 5-minute expiry
   - Atomic challenge consumption via Redis GETDEL
   - PostgreSQL-backed credential persistence

@@ -2,22 +2,9 @@
 
 A **production-grade Axum starter** focused on **correctness, observability, scalability, and security-ready persistence** — not a toy CRUD demo.
 
-This repository builds on an existing, mature Axum foundation and incrementally adds **WebAuthn / Passkeys** support in clearly defined phases.
-The README is updated **only at the end of each WebAuthn phase** to reflect *completed, validated capabilities*.
-
-> **Baseline:** axum-quickstart (existing, production-ready foundation)
-> **WebAuthn Status:**
->     ✅ Phase 1 complete — Database Infrastructure for WebAuthn
->     ✅ Phase 2 complete — Passkey Registration
->     👉 Phase 3 **Next:** — Passkey Authentication Flow
->      — Phase 4 Future — Credential Management API
->      — Phase 5 Future — Testing & Documentation
-
 ---
 
 ## Context
-
-This repository began as **axum-quickstart**, a production-oriented Axum API foundation with:
 
 * Stateless service design
 * Externalized state
@@ -124,11 +111,9 @@ WebAuthn support is being added **incrementally** to the existing axum-quickstar
 ### Phase 2 — Application Integration ✅ (Complete)
 
 * WebAuthn registration flow
-* WebAuthn authentication flow
 * Redis-backed challenge storage with expiry
 * Atomic challenge consumption (GETDEL)
 * PostgreSQL-backed credential persistence
-* Integrated Axum handlers
 * CI-validated integration tests
 
 ⚠️ **Known limitation**:  
