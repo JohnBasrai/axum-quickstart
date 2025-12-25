@@ -21,6 +21,7 @@ mod app_state;
 mod config;
 mod handlers;
 mod infrastructure;
+mod session;
 
 pub use config::*;
 
@@ -86,6 +87,14 @@ pub fn create_router() -> Result<Router> {
                 .route(
                     "/register/finish",
                     post(handlers::webauthn_register::register_finish),
+                )
+                .route(
+                    "/auth/start",
+                    post(handlers::webauthn_authenticate::auth_start),
+                )
+                .route(
+                    "/auth/finish",
+                    post(handlers::webauthn_authenticate::auth_finish),
                 ),
         )
         .with_state(app_state);
