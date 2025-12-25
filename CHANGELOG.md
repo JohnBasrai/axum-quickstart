@@ -9,7 +9,20 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [1.4.0] - 2025-12-25
 
-### Added
+### Added (Phase 3 - Authentication)
+- WebAuthn authentication endpoints (`/webauthn/auth/start`, `/webauthn/auth/finish`)
+- Session token generation with UUID-based tokens stored in Redis
+- Session management module with 7-day TTL (604,800 seconds)
+- Counter validation to prevent replay attacks (increments on each authentication)
+- Integration tests for authentication flow, counter validation, and session management
+
+### Security (Phase 3)
+- Generic "Authentication failed" error messages prevent username enumeration
+- Counter replay attack detection (rejects counter <= stored value)
+- Atomic GETDEL for challenge retrieval (single-use challenges)
+- Challenge expiry enforced via Redis TTL (5 minutes)
+
+### Added (Phase 2 - Registration)
 - **Phase 2: WebAuthn Application Integration (Issue #25)**
   - WebAuthn registration flows
   - Redis-backed challenge storage with 5-minute expiry

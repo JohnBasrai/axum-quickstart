@@ -118,6 +118,11 @@ echo "---------------- metrics_endpoint tests --------"
 echo "------------------------------------------------"
 cargo test ${QUIET} --test metrics_endpoint -- --nocapture
 
+echo "------------------------------------------------"
+echo "---------------- webauthn_authentication tests --------"
+echo "------------------------------------------------"
+cargo test ${QUIET} --test webauthn_authentication -- --nocapture
+
 echo "------------------------------------------------------"
 echo "---------------- database::postgres_repository tests -"
 echo "------------------------------------------------------"

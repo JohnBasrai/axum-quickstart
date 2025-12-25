@@ -44,7 +44,7 @@ These are architectural constraints, not aspirational statements.
 
 ---
 
-## Current Capabilities (WebAuthn – End of Phase 1)
+## Current Capabilities (WebAuthn – End of Phase 3)
 
 ### Persistence & Data Integrity ✅
 
@@ -118,6 +118,18 @@ WebAuthn support is being added **incrementally** to the existing axum-quickstar
 
 ⚠️ **Known limitation**:  
 Two WebAuthn verification tests are currently ignored due to upstream test utility limitations (see Issue #33).
+
+### Phase 3 – Passkey Authentication Flow ✅ (Complete)
+
+* WebAuthn authentication endpoints (`/webauthn/auth/start`, `/webauthn/auth/finish`)
+* Session token generation with 7-day TTL
+* Counter validation to prevent replay attacks
+* Atomic challenge consumption via Redis GETDEL
+* Generic error messages prevent username enumeration
+* CI-validated integration tests
+
+⚠️ **Known limitation**:  
+Three WebAuthn authentication tests are currently ignored due to upstream test utility limitations (see Issue #33).
 
 ---
 
@@ -227,8 +239,8 @@ The following phases describe the incremental addition of **WebAuthn / Passkeys*
 
 * **Phase 1** — Persistence & Integrity ✅
 * **Phase 2** — WebAuthn Flows ✅
-* **Phase 3** — Passkey Authentication Flow (planned)
-* **Phase 4** — Credential Management & Hardening (future)
+* **Phase 3** — Passkey Authentication Flow ✅
+* **Phase 4** — Credential Management & Hardening (planned)
 
 The README is updated **only at phase boundaries**.
 
