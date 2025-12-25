@@ -36,7 +36,7 @@ pub async fn init_database_with_retry_from_env() -> Result<()> {
     // ---
 
     if DB_POOL.get().is_some() {
-        tracing::info!("init_database_with_retry_from_env: Pool is already initialized");
+        tracing::debug!("init_database_with_retry_from_env: Pool is already initialized");
         return Ok(());
     }
 

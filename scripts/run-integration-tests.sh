@@ -92,25 +92,10 @@ echo "🧪 Running integration tests..."
 
 QUIET="--quiet"
 QUIET=""
+export RUST_LOG=info
+export NO_COLOR=true
 
 docker compose ps
-
-echo "------------------------------------------------"
-echo "---------------- integration tests -------------"
-echo "------------------------------------------------"
-RUST_LOG=debug cargo test ${QUIET} --test integration -- --nocapture
-
-echo "------------------------------------------------"
-echo "---------------- metrics_endpoint tests --------"
-echo "------------------------------------------------"
-RUST_LOG=debug cargo test ${QUIET} --test metrics_endpoint -- --nocapture
-
-echo "------------------------------------------------"
-echo "---------------- database::postgres_repository tests"
-echo "------------------------------------------------"
-RUST_LOG=debug cargo test --lib ${QUIET} -- infrastructure::database::postgres_repository \
-  --nocapture
-
 docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_statement = 'all';"
 docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_connections = 'on';"
 docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_disconnections = 'on';"
@@ -119,9 +104,29 @@ docker compose exec postgres psql -U postgres -c "SELECT pg_reload_conf();"
 (docker compose logs postgres --tail 50 --follow >& postgres.log&)
 
 echo "------------------------------------------------"
+echo "---------------- integration tests -------------"
+echo "------------------------------------------------"
+cargo test ${QUIET} --test integration -- --nocapture
+
+echo "-----------------------------------------------------"
+echo "---------------- webauthn_registration tests --------"
+echo "-----------------------------------------------------"
+cargo test ${QUIET} --test webauthn_registration -- --nocapture
+
+echo "------------------------------------------------"
+echo "---------------- metrics_endpoint tests --------"
+echo "------------------------------------------------"
+cargo test ${QUIET} --test metrics_endpoint -- --nocapture
+
+echo "------------------------------------------------------"
+echo "---------------- database::postgres_repository tests -"
+echo "------------------------------------------------------"
+cargo test --lib ${QUIET} -- infrastructure::database::postgres_repository --nocapture
+
+echo "------------------------------------------------"
 echo "---------------- database::tests ---------------"
 echo "------------------------------------------------"
-RUST_LOG=debug cargo test --lib ${QUIET} -- infrastructure::database::tests --nocapture
+cargo test --lib ${QUIET} -- infrastructure::database::tests --nocapture
 
 echo "✅ Integration tests completed successfully!"
 exit_status=0

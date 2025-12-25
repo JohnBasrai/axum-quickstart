@@ -1,54 +1,14 @@
 use anyhow::{ensure, Result};
 use axum_quickstart::create_router;
-use reqwest::Client;
 use serde_json::json;
-use std::time::Duration;
-use tokio::net::TcpListener;
-use tokio::time::sleep;
 
-struct TestServer {
-    pub addr: std::net::SocketAddr,
-    pub client: Client,
-}
-
-impl TestServer {
-    // ---
-    pub async fn new() -> Self {
-        // --
-
-        // Enable debug logging only when requested
-        if std::env::var("TEST_DEBUG").is_ok() {
-            std::env::set_var("RUST_LOG", "debug");
-            std::env::set_var("NO_COLOR", "1");
-        }
-
-        let app = create_router().expect("Should be able to create router");
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-
-        // Spawn the server in the background
-        tokio::spawn(async move {
-            axum::serve(listener, app).await.unwrap();
-        });
-
-        // Give the server a moment to start
-        sleep(Duration::from_millis(100)).await;
-
-        let client = Client::new();
-
-        Self { addr, client }
-    }
-
-    pub fn url(&self, path: &str) -> String {
-        // ---
-        format!("http://{}{}", self.addr, path)
-    }
-}
+mod common;
 
 #[tokio::test]
 #[serial_test::serial]
 async fn basic_integration_test() {
     // ---
+    common::setup_test_env().await;
     // Test that the router can be created successfully
     let _router = create_router().expect("Should be able to create router");
 }
@@ -57,7 +17,8 @@ async fn basic_integration_test() {
 #[serial_test::serial]
 async fn health_endpoint_works() {
     // ---
-    let server = TestServer::new().await;
+    common::setup_test_env().await;
+    let server = common::TestServer::new().await;
 
     let response = server
         .client
@@ -76,7 +37,8 @@ async fn health_endpoint_works() {
 #[serial_test::serial]
 async fn root_endpoint_works() {
     // ---
-    let server = TestServer::new().await;
+    common::setup_test_env().await;
+    let server = common::TestServer::new().await;
 
     let response = server
         .client
@@ -95,7 +57,8 @@ async fn root_endpoint_works() {
 #[serial_test::serial]
 async fn movies_crud_operations() -> Result<()> {
     // ---
-    let server = TestServer::new().await;
+    common::setup_test_env().await;
+    let server = common::TestServer::new().await;
 
     // Test GET /movies (should be empty initially)
     let response = server
@@ -158,7 +121,8 @@ async fn movies_crud_operations() -> Result<()> {
 #[serial_test::serial]
 async fn invalid_routes_return_404() {
     // ---
-    let server = TestServer::new().await;
+    common::setup_test_env().await;
+    let server = common::TestServer::new().await;
 
     let response = server
         .client
@@ -174,7 +138,8 @@ async fn invalid_routes_return_404() {
 #[serial_test::serial]
 async fn server_handles_concurrent_requests() {
     // ---
-    let server = TestServer::new().await;
+    common::setup_test_env().await;
+    let server = common::TestServer::new().await;
 
     // Make multiple concurrent requests
     let futures = (0..10).map(|_| server.client.get(server.url("/health")).send());
@@ -192,7 +157,8 @@ async fn server_handles_concurrent_requests() {
 #[serial_test::serial]
 async fn server_handles_malformed_json() {
     // ---
-    let server = TestServer::new().await;
+    common::setup_test_env().await;
+    let server = common::TestServer::new().await;
 
     // Send malformed JSON to movies endpoint
     let response = server
@@ -212,10 +178,12 @@ async fn server_handles_malformed_json() {
 #[serial_test::serial]
 async fn redis_integration_works() {
     // ---
+    common::setup_test_env().await;
+
     // This test assumes Redis is available
     // You might want to make this conditional based on environment
 
-    let server = TestServer::new().await;
+    let server = common::TestServer::new().await;
 
     // Make some requests that would use Redis (if your app caches anything)
     let response = server

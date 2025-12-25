@@ -7,11 +7,12 @@ use uuid::Uuid;
 // One runtime to rule them all...
 /// Shared tokio runtime for all database tests.
 ///
-/// Each test shares this single runtime instead of creating a new one per test.
-/// This keeps the database connection pool alive across all tests. Without it,
-/// each `#[tokio::test]` would create its own runtime, and when that runtime drops
-/// at test completion, the pool connections would be closed, causing subsequent
-/// tests to timeout waiting for new connections.
+/// We must initialize the database once and tests must share it.  Each test also must
+/// share this single runtime instead of creating a new one per test.  This keeps the
+/// database connection pool alive across all tests. Without it, each `#[tokio::test]`
+/// would create its own runtime, and when that runtime drops at test completion, the pool
+/// connections would be closed, causing subsequent tests to timeout waiting for new
+/// connections.
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     // ---
     tokio::runtime::Builder::new_multi_thread()
@@ -27,7 +28,6 @@ fn init_tracing() {
     // ---
     TRACING_INIT.call_once(|| {
         tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
             .with_ansi(false)  // No colorization, makes logs easier to read.
             .with_test_writer()
             .init();

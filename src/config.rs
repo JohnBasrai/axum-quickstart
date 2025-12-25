@@ -179,7 +179,7 @@ mod redis {
         /// Returns an error if required configuration is missing.
         pub fn from_env() -> Result<Self> {
             // ---
-            let url = required_env!("AXUM_REDIS_URL");
+            let url = required_env!("REDIS_URL");
 
             let ttl_secs = optional_env_parse!("AXUM_WEBAUTHN_CHALLENGE_TTL_SEC", u64, 300);
 
@@ -312,7 +312,7 @@ mod tests {
     fn app_config_from_env_success() -> Result<()> {
         // ---
         std::env::set_var("DATABASE_URL", "postgres://test");
-        std::env::set_var("AXUM_REDIS_URL", "redis://localhost");
+        std::env::set_var("REDIS_URL", "redis://localhost");
         std::env::set_var("AXUM_WEBAUTHN_RP_ID", "example.com");
         std::env::set_var("AXUM_WEBAUTHN_ORIGIN", "https://example.com");
 

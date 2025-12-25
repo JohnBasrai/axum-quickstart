@@ -121,12 +121,11 @@ pub async fn register_start(
 
     // Store registration state in Redis with TTL (using bincode)
     let state_key = format!("webauthn:reg:{}", req.username);
-    let state_bytes = bincode::serialize(&registration_state).map_err(|e| {
-        tracing::error!("Failed to serialize registration state: {}", e);
+    let state_bytes = serde_json::to_vec(&registration_state).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Serialization error".to_string(),
+                error: format!("failed to serialize webauthn registration state: {e}"),
             }),
         )
     })?;
@@ -193,7 +192,9 @@ pub async fn register_finish(
         )
     })?;
 
-    let state_bytes: Vec<u8> = conn.get(&state_key).await.map_err(|e| {
+    // A challenge must be consumed, not fetched then deleted later, i.e. this must
+    // be atomic
+    let state_bytes: Vec<u8> = conn.get_del(&state_key).await.map_err(|e| {
         tracing::warn!("Challenge not found or expired for user: {}", req.username);
         tracing::debug!("Redis error: {}", e);
         (
@@ -204,24 +205,12 @@ pub async fn register_finish(
         )
     })?;
 
-    // Delete the challenge (single-use)
-    let _: () = conn.del(&state_key).await.map_err(|e| {
-        tracing::error!("Failed to delete challenge from Redis: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: "Failed to cleanup challenge".to_string(),
-            }),
-        )
-    })?;
-
     let registration_state: PasskeyRegistration =
-        bincode::deserialize(&state_bytes).map_err(|e| {
-            tracing::error!("Failed to deserialize registration state: {}", e);
+        serde_json::from_slice(&state_bytes).map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: "Invalid challenge state".to_string(),
+                    error: format!("failed to deserialize webauthn registration state: {e}"),
                 }),
             )
         })?;
@@ -266,7 +255,7 @@ pub async fn register_finish(
     // Store credential in database
     // Note: Passkey is serialized as the public_key, counter is extracted separately
     let cred_id = passkey.cred_id().to_vec();
-    let passkey_bytes = bincode::serialize(&passkey).map_err(|e| {
+    let passkey_bytes = serde_json::to_vec(&passkey).map_err(|e| {
         tracing::error!("Failed to serialize passkey: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
