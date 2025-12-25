@@ -23,6 +23,9 @@ mod handlers;
 mod infrastructure;
 mod session;
 
+// Hoist up only the public symbol(s)
+pub use session::create_session;
+
 pub use config::*;
 
 // Publicly expose the infrastructure creation functions
