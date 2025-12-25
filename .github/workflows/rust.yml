@@ -74,7 +74,7 @@ jobs:
           ${{ runner.os }}-target-
     
     - name: Install sqlx-cli
-      run: cargo install sqlx-cli --no-default-features --features postgres
+      run: cargo install sqlx-cli --quiet --no-default-features --features postgres
     
     - name: Run database migrations
       run: sqlx migrate run
@@ -89,4 +89,4 @@ jobs:
       run: cargo build --quiet
     
     - name: Run tests
-      run: cargo test --quiet
+      run: cargo test --quiet -- --test-threads=1
