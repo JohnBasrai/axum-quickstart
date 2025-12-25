@@ -256,9 +256,16 @@ mod tests {
     #[serial]
     fn missing_database_url_fails() -> Result<()> {
         // ---
+        let prev = std::env::var("DATABASE_URL").ok();
         std::env::remove_var("DATABASE_URL");
 
         assert_missing_config!(database::DatabaseConfig::from_env(), "DATABASE_URL");
+
+        // restore previous value
+        match prev {
+            Some(v) => std::env::set_var("DATABASE_URL", v),
+            None => std::env::remove_var("DATABASE_URL"),
+        }
 
         Ok(())
     }
