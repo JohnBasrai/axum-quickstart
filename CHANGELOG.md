@@ -7,6 +7,29 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-12-25
+
+### Added
+- **Phase 2: WebAuthn Application Integration (Issue #25)**
+  - WebAuthn registration and authentication flows
+  - Redis-backed challenge storage with 5-minute expiry
+  - Atomic challenge consumption via Redis GETDEL
+  - PostgreSQL-backed credential persistence
+  - Multi-credential (multi-device) support
+  - Integrated Axum handlers for WebAuthn flows
+
+### Changed
+- Normalize Redis configuration to `REDIS_URL`
+- Improve metrics test realism (remove forced serialization)
+- Harden test environment setup with default-only env initialization
+
+### Testing
+- CI validates full WebAuthn registration flow
+- ⚠️ Two WebAuthn verification tests are ignored due to upstream limitations (see Issue #33)
+
+### Dependencies
+- Switched WebAuthn state serialization to `serde_json`
+
 ## [1.3.3] - 2025-12-23
 
 ### Added
