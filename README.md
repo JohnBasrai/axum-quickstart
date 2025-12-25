@@ -241,8 +241,9 @@ The service is intentionally designed to be **horizontally scalable**: all persi
 The following phases describe the incremental addition of **WebAuthn / Passkeys** to the existing axum-quickstart foundation:
 
 * **Phase 1** — Persistence & Integrity ✅
-* **Phase 2** — WebAuthn Flows 🚧
-* **Phase 3** — Credential Management & Hardening (planned)
+* **Phase 2** — WebAuthn Flows ✅
+* **Phase 3** — Passkey Authentication Flow (planned)
+* **Phase 4** — Credential Management & Hardening (future)
 
 The README is updated **only at phase boundaries**.
 
