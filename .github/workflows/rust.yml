@@ -2,6 +2,7 @@ name: Rust CI
 
 on:
   push:
+    branches: [ main ]
   pull_request:
 
 jobs:
@@ -34,7 +35,7 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/axum_db
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/axum_db
       REDIS_URL: redis://localhost:6379
 
     steps:
