@@ -3,7 +3,7 @@
 //! Tests credential listing and deletion endpoints with session-based authentication.
 
 use axum_quickstart::create_postgres_repository;
-use axum_quickstart::domain::{Credential, Repository, RepositoryPtr, User};
+use axum_quickstart::domain::{Credential, RepositoryPtr, User};
 use axum_quickstart::{create_session, validate_session};
 use once_cell::sync::Lazy;
 use redis::AsyncCommands;
@@ -107,7 +107,7 @@ fn test_session_validation_success() {
 
         // Cleanup
         let _: Result<(), _> = redis_conn.del(format!("session:{}", token)).await;
-        let _ = repo.delete_credential(&user.id.as_bytes().to_vec()).await;
+        let _ = repo.delete_credential(user.id.as_bytes().as_ref()).await;
     });
 }
 

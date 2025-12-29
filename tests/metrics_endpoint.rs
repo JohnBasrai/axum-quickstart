@@ -1,10 +1,16 @@
+use serial_test::serial;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 
 mod common;
 
+// NOTE: Metrics use a global Prometheus registry.
+// Tests are serial to avoid double-registration races.
+// Can be removed once metrics registry is injectable per test.
+
 #[tokio::test]
+#[serial]
 async fn metrics_endpoint_with_prometheus() {
     // ---
     // Set environment to use Prometheus metrics for this test
@@ -67,6 +73,7 @@ async fn metrics_endpoint_with_prometheus() {
 }
 
 #[tokio::test]
+#[serial]
 async fn metrics_endpoint_with_noop() {
     // ---
     // Set environment to use noop metrics (or don't set it)
@@ -106,6 +113,7 @@ async fn metrics_endpoint_with_noop() {
 }
 
 #[tokio::test]
+#[serial]
 async fn metrics_endpoint_survives_load() {
     // ---
     common::setup_test_env().await;
@@ -159,6 +167,7 @@ async fn metrics_endpoint_survives_load() {
 }
 
 #[tokio::test]
+#[serial]
 async fn metrics_content_type_is_correct() {
     // ---
     common::setup_test_env().await;

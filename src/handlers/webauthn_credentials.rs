@@ -162,7 +162,7 @@ async fn extract_session(
 /// - Credential private keys are never exposed (only IDs and metadata)
 ///
 /// # Request Headers
-/// ```
+/// ```text
 /// Authorization: Bearer <session_token>
 /// ```
 ///
@@ -248,7 +248,7 @@ pub async fn list_credentials(
 /// - Prevents unauthorized deletion of other users' credentials
 ///
 /// # Request Headers
-/// ```
+/// ```text
 /// Authorization: Bearer <session_token>
 /// ```
 ///

@@ -36,4 +36,8 @@ cargo build --quiet
 echo "🧪 Running unit tests..."
 cargo test --lib -- --skip infrastructure::database
 
+# Run doc tests
+echo "📚 Running doc tests..."
+cargo test --doc
+
 echo "✅ Unit tests completed successfully!"
