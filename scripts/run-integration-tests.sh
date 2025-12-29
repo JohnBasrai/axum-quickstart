@@ -19,7 +19,7 @@ cleanup() {
     echo "🧹 Cleaning up... $exit_status"
     set -x
     cd "$PROJECT_ROOT"
-    docker compose down -v --remove-orphans
+    docker compose --ansi never down -v --remove-orphans
     exit $exit_status
 }
 
@@ -37,17 +37,17 @@ fi
 
 # Start services
 echo "🐳 Starting Docker services..."
-docker compose up -d redis postgres
+docker compose --ansi never up -d redis postgres
 
 # Wait for Redis to be ready
 echo "⏳ Waiting for Redis to be ready..."
 timeout=30
 counter=0
 
-while ! docker compose exec redis redis-cli ping > /dev/null 2>&1; do
+while ! docker compose --ansi never exec redis redis-cli ping > /dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
         echo "❌ Redis failed to start within $timeout seconds"
-        docker compose logs redis
+        docker compose --ansi never logs redis
         exit 1
     fi
     echo "Waiting for Redis... ($counter/$timeout)"
@@ -61,10 +61,10 @@ echo "✅ Redis is ready!"
 echo "⏳ Waiting for PostgreSQL to be ready..."
 counter=0
 
-while ! docker compose exec postgres pg_isready -U postgres > /dev/null 2>&1; do
+while ! docker compose --ansi never exec postgres pg_isready -U postgres > /dev/null 2>&1; do
     if [ $counter -ge $timeout ]; then
         echo "❌ PostgreSQL failed to start within $timeout seconds"
-        docker compose logs postgres
+        docker compose --ansi never logs postgres
         exit 1
     fi
     echo "Waiting for PostgreSQL... ($counter/$timeout)"
@@ -73,6 +73,9 @@ while ! docker compose exec postgres pg_isready -U postgres > /dev/null 2>&1; do
 done
 
 echo "✅ PostgreSQL is ready!"
+
+# Set database URL for migrations
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/axum_db"
 
 # Run database migrations
 echo "📦 Running database migrations..."
@@ -95,13 +98,13 @@ QUIET=""
 export RUST_LOG=info
 export NO_COLOR=true
 
-docker compose ps
-docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_statement = 'all';"
-docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_connections = 'on';"
-docker compose exec postgres psql -U postgres -c "ALTER SYSTEM SET log_disconnections = 'on';"
-docker compose exec postgres psql -U postgres -c "SELECT pg_reload_conf();"
+docker compose --ansi never ps
+docker compose --ansi never exec postgres psql -U postgres -c "ALTER SYSTEM SET log_statement = 'all';"
+docker compose --ansi never exec postgres psql -U postgres -c "ALTER SYSTEM SET log_connections = 'on';"
+docker compose --ansi never exec postgres psql -U postgres -c "ALTER SYSTEM SET log_disconnections = 'on';"
+docker compose --ansi never exec postgres psql -U postgres -c "SELECT pg_reload_conf();"
 
-(docker compose logs postgres --tail 50 --follow >& postgres.log&)
+(docker compose --ansi never logs postgres --tail 50 --follow >& postgres.log&)
 
 echo "------------------------------------------------"
 echo "---------------- integration tests -------------"
@@ -132,6 +135,11 @@ echo "------------------------------------------------"
 echo "---------------- database::tests ---------------"
 echo "------------------------------------------------"
 cargo test --lib ${QUIET} -- infrastructure::database::tests --nocapture
+
+echo "------------------------------------------------"
+echo "---------------- webauthn_credentials tests ----"
+echo "------------------------------------------------"
+cargo test ${QUIET} --test webauthn_credentials -- --nocapture
 
 echo "✅ Integration tests completed successfully!"
 exit_status=0

@@ -8,19 +8,20 @@ on:
 
 env:
   CARGO_TERM_COLOR: never
-  DATABASE_URL: postgres://postgres:postgres@localhost:5432/axum_quickstart_test
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/axum_db
   REDIS_URL: redis://localhost:6379
   RUST_LOG: info
+  SQLX_OFFLINE: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: axum_quickstart_test
+          POSTGRES_DB: axum_db
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
@@ -30,7 +31,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
+
       redis:
         image: redis:7-alpine
         ports:
@@ -43,12 +44,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt, clippy
-    
+
     - name: Cache cargo registry
       uses: actions/cache@v4
       with:
@@ -56,7 +57,7 @@ jobs:
         key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
           ${{ runner.os }}-cargo-registry-
-    
+
     - name: Cache cargo index
       uses: actions/cache@v4
       with:
@@ -64,29 +65,26 @@ jobs:
         key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
           ${{ runner.os }}-cargo-git-
-    
+
     - name: Cache target directory
       uses: actions/cache@v4
       with:
         path: target
-        key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
-          ${{ runner.os }}-target-
-    
-    - name: Install sqlx-cli
-      run: cargo install sqlx-cli --quiet --no-default-features --features postgres
-    
-    - name: Run database migrations
-      run: sqlx migrate run
-    
+          ${{ runner.os }}-cargo-target-
+
+    - name: Run JWT service integration tests
+      run: ./scripts/test-jwt-service.sh
+
     - name: Check formatting
       run: cargo fmt -- --check
-    
+
     - name: Run clippy
       run: cargo clippy --quiet --all-targets --all-features --no-deps -- -D warnings
-    
+
     - name: Build
       run: cargo build --quiet
-    
+
     - name: Run tests
       run: cargo test --quiet -- --test-threads=1

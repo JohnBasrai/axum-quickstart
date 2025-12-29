@@ -87,18 +87,24 @@ Database layer for credential storage with Repository pattern.
 
 **Delivered:** User/Credential models, Repository trait, PostgresRepository implementation, SQLx migrations, integration tests, CI/CD updates.
 
-### Phase 2: Registration Flow (Planned)
+### Phase 2: Registration Flow ✅ COMPLETE
 API endpoints for registering passkeys using webauthn-rs crate.
+
+**Delivered:** Registration challenge generation, credential storage, webauthn-rs integration, challenge storage in Redis.
 
 **Endpoints:** `POST /webauthn/register/start`, `POST /webauthn/register/finish`
 
-### Phase 3: Authentication Flow (Planned)
+### Phase 3: Authentication Flow ✅ COMPLETE
 Login with passkeys, session creation, counter validation.
+
+**Delivered:** Authentication challenge generation, credential verification, counter-based replay attack prevention, session token creation.
 
 **Endpoints:** `POST /webauthn/auth/start`, `POST /webauthn/auth/finish`
 
-### Phase 4: Credential Management (Planned)
+### Phase 4: Credential Management ✅ COMPLETE
 Users can view and delete their registered passkeys.
+
+**Delivered:** Session validation, credential listing, credential deletion with ownership verification, protected endpoints.
 
 **Endpoints:** `GET /webauthn/credentials`, `DELETE /webauthn/credentials/:id`
 
@@ -145,32 +151,11 @@ src/
 
 Follows existing codebase patterns (Metrics trait) and EMBP module organization.
 
-## What This Demonstrates
+## Why This Project Exists
 
-**Security Expertise:**
-- Modern authentication protocols (WebAuthn)
-- Cryptographic security concepts (public/private keys, replay attacks)
-- Defense in depth (counter validation, domain binding)
+WebAuthn/Passkeys represent the future of authentication - phishing-resistant, no password fatigue, strong cryptographic guarantees. This implementation integrates passwordless auth into an existing REST API to show how modern authentication can be retrofitted into production systems.
 
-**Architecture Skills:**
-- Clean Architecture principles
-- Dependency Inversion Principle
-- Repository pattern with trait abstraction
-- Module organization with explicit boundaries
-
-**Rust Proficiency:**
-- Async/await with sqlx
-- Trait-based polymorphism
-- Type-safe database queries
-- Error handling with Result types
-- Proper use of Arc for shared state
-
-**Engineering Practices:**
-- Multi-phase project planning
-- Integration with existing codebase (not greenfield)
-- Migration-based schema management
-- Test-driven development (integration tests in Phase 1)
-- CI/CD integration
+The architecture follows dependency inversion principles to keep domain logic database-agnostic while using PostgreSQL's ACID guarantees for credential storage integrity.
 
 ## References
 
@@ -181,6 +166,6 @@ Follows existing codebase patterns (Metrics trait) and EMBP module organization.
 
 ---
 
-**Status:** Phase 1 Complete | **Next:** Registration Flow (Phase 2)  
+**Status:** Phase 4 Complete | **Next:** Testing & Documentation (Phase 5)  
 **Updated:** December 2024
 
