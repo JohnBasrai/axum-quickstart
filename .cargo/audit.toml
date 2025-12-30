@@ -1,0 +1,14 @@
+# .cargo/audit.toml
+# Cargo audit configuration
+# See: https://github.com/rustsec/rustsec/blob/main/cargo-audit/audit.toml.example
+
+[advisories]
+# Ignored advisories with justification
+ignore = [
+    # RUSTSEC-2023-0071 - Marvin Attack in rsa crate
+    # Justification: Transitive dependency via sqlx-macros → sqlx-mysql → rsa
+    # Not exploitable: PostgreSQL-only configuration, MySQL driver code never executed
+    # Known SQLx limitation: macros feature pulls all database drivers
+    # See: https://github.com/launchbadge/sqlx/issues/2911
+    "RUSTSEC-2023-0071",
+]
