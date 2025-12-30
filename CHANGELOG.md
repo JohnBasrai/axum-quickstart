@@ -16,73 +16,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - None
 
-## [1.0.0] - 2025-12-27
+## [1.4.0] - 2024-12-30
 
 ### Added
 
-**Phase 4: Protected Routes & Documentation**
-- JWT authentication middleware for protected endpoints
-- Demo protected route (`GET /protected`) with Bearer token validation
-- Automated tests for protected route (Tests 8-10):
-  - Valid token acceptance (200)
-  - Missing token rejection (401)
-  - Revoked token rejection (401)
-- Comprehensive README for oauth2-client with OAuth2 flow documentation
-- Comprehensive README for oauth2-server with database schema and API reference
-- Enhanced main README with "Testing & Quality Assurance" section
-- Documentation highlighting 10-test automated suite
+**Phase 4: WebAuthn Credential Management**
+- `GET /webauthn/credentials` endpoint for listing user's registered passkeys
+- `DELETE /webauthn/credentials/:id` endpoint for removing passkeys
+- Session-based authentication with Bearer token validation
+- Ownership verification to prevent unauthorized credential deletion
+- 7 integration tests for session validation and credential CRUD operations
+- Session helper functions (`create_session`, `validate_session`)
 
-**Phase 3: JWT Service**
-- Complete JWT token service implementation (port 8083)
-- Token generation endpoint with HS256 signing (`POST /auth/token`)
-- Token validation endpoint with signature verification (`POST /auth/validate`)
-- Refresh token flow with rotation security (`POST /auth/refresh`)
-- Token revocation with Redis blacklist (`POST /auth/revoke`)
-- 7 automated integration tests for JWT flows
-- JWT primer documentation (theory and concepts)
-- Development setup guide
-- CONTRIBUTING.md with code quality standards
+**Infrastructure & Testing Improvements**
+- Local CI runner (`scripts/ci-local.sh`) using `act` for debugging CI failures
+- Doctests now run in unit test suite to match GitHub Actions
+- Fixed database hostname for GitHub Actions (postgres → localhost)
+- Serialized metrics tests with `#[serial]` to prevent Prometheus registry races
+- Prevented duplicate CI workflow runs on PR branches
+- Standardized database name to `axum_db` across all environments
+- Bumped Rust toolchain to 1.92.0 for consistency
+- GitHub Actions cache optimization (773 MB target cache, ~56% build time reduction)
 
-**Phase 2: OAuth2 Server**
-- Complete OAuth2 authorization server implementation (port 8082)
-- Authorization endpoint with consent page (`GET/POST /oauth/authorize`)
-- Token exchange endpoint (`POST /oauth/token`)
-- User info endpoint (`GET /oauth/userinfo`)
-- PostgreSQL database schema (clients, users, authorization codes, access tokens)
-- Database migrations with seed data (demo user and client)
-- Argon2 password hashing for demo users
-- Manual request body deserialization for better debugging
-
-**Phase 1: OAuth2 Client**
-- OAuth2 client implementation with authorization code flow (port 8081)
-- HTTP handlers: home, login, callback, profile
-- Integration with oauth2-server for end-to-end flow
-
-**Infrastructure & Quality**
-- Docker Compose setup (PostgreSQL + Redis)
-- Development scripts: `startup.sh`, `shutdown.sh`, `test-all.sh`, `test-jwt-service.sh`
-- GitHub Actions CI/CD pipeline
-- EMBP (Explicit Module Boundary Pattern) architecture
-- Request tracing with configurable ANSI output
-- Environment-based configuration (`.env` support)
-- Comprehensive rustdoc with RFC references (RFC 6749, RFC 7519)
+**Documentation**
+- Comprehensive WebAuthn architecture documentation
+- SQLx offline mode how-to guide
+- Updated CONTRIBUTING.md with testing guidelines
 
 ### Changed
-- OAuth2 client uses RequestBody auth type for token exchange
-- Enhanced logging for debugging OAuth2 token exchange
-- Main README reorganized with prominent testing section
-- Claims struct includes Clone derive for Axum 0.8 compatibility
+- Database name standardized to `axum_db` (from `axum_quickstart_test`)
+- GitHub Actions workflow improvements for better CI/CD parity with local testing
+- Enhanced integration test scripts with better error handling
 
-### Security
-- Token revocation with Redis-backed blacklist
-- Refresh token rotation (prevents replay attacks)
-- JWT signature validation (HS256)
-- Token expiration checking (15 min for access, 7 days for refresh)
-- Protected route middleware validates signature, expiration, and revocation
-- Argon2id password hashing for demo users
-- CSRF protection via state parameter in OAuth2 flow
-
-## [0.1.0] - 2025-12-26
+## [1.3.3] - 2024-12-28
 
 ### Added
-- Initial project setup
+
+**Phase 3: WebAuthn Authentication Flow**
+- `POST /webauthn/auth/start` endpoint for authentication challenge generation
+- `POST /webauthn/auth/finish` endpoint for credential verification and session creation
+- Counter-based replay attack prevention with atomic database updates
+- Session token creation with 7-day TTL in Redis
+- Challenge storage in Redis with 5-minute expiry
+- 6 integration tests for authentication flow (3 additional tests ignored pending Issue #33)
+- Session management tests (creation, TTL validation)
+- Counter increment and replay detection tests
+- Redis challenge storage tests (atomic GETDEL, expiry validation)
+
+**Documentation**
+- WebAuthn architecture documentation with security highlights
+- Phase 3 completion markers in architecture docs
+
+### Fixed
+- WebAuthn verifier injection limitations documented (Issue #33)
+
+## [1.3.2] - 2024-12-27
+
+### Fixed
+- Removed OpenSSL dependency by disabling reqwest default features (#29)
+- Resolved build failures on systems without OpenSSL development headers
+
+### Changed
+- Updated reqwest configuration to use rustls instead of native-tls
+
+## [1.3.1] - 2024-12-27
+
+### Added
+
+**Phase 2: WebAuthn Registration Flow**
+- `POST /webauthn/register/start` endpoint for registration challenge generation
+- `POST /webauthn/register/finish` endpoint for credential storage
+- webauthn-rs integration for protocol implementation
+- Challenge storage in Redis with automatic expiry
+- User creation during registration (username-based)
+- 6 integration tests for registration flow (2 additional tests ignored pending Issue #33)
+- Comprehensive error handling for registration edge cases
+
+**Documentation**
+- Phase 2 completion documentation
+- Registration flow architecture details
+
+### Changed
+- Enhanced error responses for registration endpoints
+- Improved test coverage for WebAuthn flows
+
+## [1.3.0] - 2024-12-26
+
+### Added
+
+**Phase 1: WebAuthn Database Infrastructure**
+- Domain models (`User`, `Credential`) for WebAuthn entities
+- `Repository` trait defining data access contract (Clean Architecture)
+- `PostgresRepository` implementation with SQLx
+- Database migrations for `users` and `credentials` tables
+- Foreign key constraints ensuring data integrity (credentials → users)
+- 9 unit tests for repository operations
+- 1 schema test for cascade deletion
+- UUID-based user identification
+- Binary credential ID storage (BYTEA)
+- Cryptographic counter storage for replay attack prevention
+
+**Infrastructure**
+- PostgreSQL 16 integration with Docker Compose
+- SQLx compile-time query verification
+- Database initialization with connection pooling
+- Comprehensive integration test setup
+
+**Documentation**
+- WebAuthn architecture overview
+- Clean Architecture principles documentation
+- Repository pattern explanation
+- Database schema documentation
+
+### Changed
+- Upgraded project structure to support WebAuthn features
+- Enhanced CI/CD pipeline for database testing
+
+---
+
+**Previous versions (pre-WebAuthn) are not documented in this changelog**
