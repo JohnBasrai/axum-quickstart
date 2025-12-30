@@ -21,6 +21,19 @@ struct SessionData {
 
 // ---
 
+/// Validated session information extracted from Redis.
+///
+/// This struct is returned after successful session token validation
+/// and contains the authenticated user's details.
+#[derive(Debug, Clone)]
+pub struct SessionInfo {
+    // ---
+    pub user_id: Uuid,
+    pub username: String,
+}
+
+// ---
+
 /// Session token time-to-live in seconds (7 days).
 const SESSION_TTL_SECONDS: i64 = 604_800;
 
@@ -71,4 +84,81 @@ pub async fn create_session(
     tracing::info!("Created session for user: {}", username);
 
     Ok(token)
+}
+
+// ---
+
+/// Validates a session token and returns the authenticated user's information.
+///
+/// Extracts the session token from Redis and verifies it hasn't expired.
+///
+/// # Security
+///
+/// - Validates token exists in Redis (stateful session management)
+/// - Checks expiration timestamp
+/// - Returns user_id for authorization checks
+///
+/// # Arguments
+/// * `redis_conn` - Active Redis connection
+/// * `token` - Session token (typically from Authorization header)
+///
+/// # Returns
+/// SessionInfo on success, or HTTP status code on failure
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Token is not found in Redis (expired or invalid)
+/// - Session data cannot be deserialized
+/// - Session has expired
+pub async fn validate_session(
+    redis_conn: &mut MultiplexedConnection,
+    token: &str,
+) -> Result<SessionInfo, StatusCode> {
+    // ---
+    // format!() allocates ~40-50 bytes on heap per request.
+    // In a hot path this contributes to allocator contention, but
+    // Redis I/O (1-5ms) and JSON parsing (dozens of allocations)
+    // dominate request latency. Optimize those first.
+    let redis_key = format!("session:{token}");
+
+    // Fetch session data from Redis
+    let session_json: Option<String> = redis_conn.get(&redis_key).await.map_err(|e| {
+        // ---
+        tracing::error!("Failed to query Redis for session: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let session_json = session_json.ok_or_else(|| {
+        // ---
+        tracing::debug!("Session token not found or expired: {}", token);
+        StatusCode::UNAUTHORIZED
+    })?;
+
+    // Deserialize session data
+    let session_data: SessionData = serde_json::from_str(&session_json).map_err(|e| {
+        // ---
+        tracing::error!("Failed to deserialize session data: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Check if session has expired
+    let now = chrono::Utc::now().timestamp();
+    if session_data.expires_at < now {
+        // ---
+        tracing::debug!("Session expired for user: {}", session_data.username);
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    // Parse user_id from string
+    let user_id = Uuid::parse_str(&session_data.user_id).map_err(|e| {
+        // ---
+        tracing::error!("Invalid user_id in session data: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(SessionInfo {
+        user_id,
+        username: session_data.username,
+    })
 }

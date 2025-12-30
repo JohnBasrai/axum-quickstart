@@ -53,6 +53,14 @@ mod helpers {
     }
 }
 
+// Struct definitions
+pub struct Credential {
+    // ---
+    pub id: Vec<u8>,
+    pub user_id: Uuid,
+    pub counter: i32,
+}
+
 // Impl blocks
 impl Metrics for PrometheusMetrics {
     // ---
@@ -71,6 +79,13 @@ pub fn init_metrics() {
     // ...
 }
 
+// Struct literals (construction) - NO separator
+let credential = Credential {
+    id: vec![1, 2, 3],
+    user_id: user.id,
+    counter: 0,
+};
+
 // Test modules
 #[cfg(test)]
 mod tests {
@@ -86,12 +101,17 @@ mod tests {
 ```
 
 **Style Guidelines:**
-- Use `// ---` for visual separation in **module blocks**, **impl blocks**, and **function bodies**
-- Place separators after the opening brace and before the first meaningful line
-- For modules: place separator after `mod name {` and before imports/content
-- For impl blocks: place separator after `impl ... {` and before the first method
-- For functions: place separator after function signature and before the main logic
-- Keep separators consistent across the codebase
+1) Use `// ---` for visual separation in at a minimum **module blocks**, **impl blocks**, **struct definitions**, and **function bodies**
+2) Place separators after the opening brace and before the first meaningful line
+3) Between meaningful steps of logic processing (e.g., separating validation, database operations, and response formatting)
+4) For modules: place separator after `mod name {` and before imports/content
+5) For impl blocks: place separator after `impl ... {` and before the first method
+6) For struct definitions: place separator after `struct Name {` and before field declarations
+7) For functions: place separator after function signature and before the main logic
+8) Do NOT use separators inside struct literals (during construction)
+9) Keep separators consistent across the codebase
+
+**Note:** This project uses rustfmt's default configuration. The `// ---` separator pattern is a formatting convention to work around rustfmt's blank line removal in stable Rust.
 
 ### Complete Style Guide
 

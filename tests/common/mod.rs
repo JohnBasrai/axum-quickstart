@@ -32,7 +32,7 @@ pub async fn setup_test_env() {
         // ---
         set_env_if_unset!(
             "DATABASE_URL",
-            "postgres://postgres:postgres@localhost:5432/axum_quickstart_test"
+            "postgres://postgres:postgres@localhost:5432/axum_db"
         );
         set_env_if_unset!("REDIS_URL", "redis://127.0.0.1:6379");
         set_env_if_unset!("AXUM_WEBAUTHN_RP_ID", "localhost");

@@ -24,7 +24,7 @@ mod infrastructure;
 mod session;
 
 // Hoist up only the public symbol(s)
-pub use session::create_session;
+pub use session::{create_session, validate_session, SessionInfo};
 
 pub use config::*;
 
@@ -98,6 +98,14 @@ pub fn create_router() -> Result<Router> {
                 .route(
                     "/auth/finish",
                     post(handlers::webauthn_authenticate::auth_finish),
+                )
+                .route(
+                    "/credentials",
+                    get(handlers::webauthn_credentials::list_credentials),
+                )
+                .route(
+                    "/credentials/{id}",
+                    delete(handlers::webauthn_credentials::delete_credential),
                 ),
         )
         .with_state(app_state);
