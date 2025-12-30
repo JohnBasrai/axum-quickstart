@@ -1,147 +1,281 @@
-# tokn
+# Axum Quickstart — Production-Oriented API Foundation
 
-OAuth2/OIDC and JWT authentication infrastructure demonstration in Rust.
+Axum-based REST API demonstrating incremental integration of WebAuthn/Passkeys authentication into an existing service, with emphasis on correctness, observability, and testing.
+
+## Context
+
+This project demonstrates how to build and evolve a real-world Rust API service with:
+
+* **Stateless service design** - horizontally scalable, externalized state
+* **Observability** - metrics, health checks, structured logging
+* **Comprehensive integration testing** - real PostgreSQL and Redis, not mocks
+* **CI parity with local development** - same workflow, same results
+
+**Current work:** Incrementally adding WebAuthn/Passkeys authentication to the existing base, demonstrating how modern authentication is added to real systems—not greenfield demos.
 
 ## Overview
 
-This workspace demonstrates authentication patterns with:
+This project demonstrates:
 
-- **oauth2-client** (port 8081) - Demo application using OAuth2 authentication
-- **oauth2-server** (port 8082) - OAuth2 authorization server implementation
-- **jwt-service** (port 8083) - Standalone JWT token service
+- **WebAuthn/Passkeys** - Passwordless authentication (Touch ID, Face ID, YubiKey, Windows Hello)
+- **Clean Architecture** - Dependency inversion with Repository pattern
+- **PostgreSQL** - Authoritative persistence with ACID guarantees for cryptographic credentials
+- **Redis** - Session management, challenge storage, and caching
+- **Integration Testing** - 57 automated tests validating real behavior against actual services
 
----
+## Features
 
-## Prerequisites
+### WebAuthn Authentication (Passwordless)
+- **Registration** - Create passkey credentials with authenticators
+- **Authentication** - Login using biometrics or hardware keys
+- **Credential Management** - List and delete registered passkeys
+- **Replay Attack Prevention** - Cryptographic counter validation
+- **Multi-device Support** - Multiple passkeys per account
 
-- Rust toolchain (install via [rustup](https://rustup.rs/))
-- Docker & Docker Compose
-- `.env` file (copy from `.env.example`)
-
-**For detailed environment setup, see [docs/development-setup.md](docs/development-setup.md)**
-
----
+### Core API
+- Health checks and metrics (Prometheus)
+- CRUD operations with Redis backend
+- Session-based authentication
 
 ## Quick Start
 
-**Note:** `.env.example` includes a demo JWT_SECRET. For production, generate a secure secret (see [Prerequisites](#prerequisites)).
+### Using Scripts (Recommended)
 
 ```bash
-# Copy example config
+# Start all services (PostgreSQL + Redis)
+source ./scripts/startup.sh
+
+# Run the server
+cargo run
+
+# Server running at http://localhost:3000
+
+# Stop all services when done
+./scripts/shutdown.sh
+```
+
+### Manual Setup
+
+```bash
+# Copy environment config
 cp .env.example .env
 
-# Start infrastructure (PostgreSQL + Redis)
+# Start services (PostgreSQL + Redis)
 docker compose up -d
 
-# Run oauth2-server
-cargo run -p oauth2-server
+# Run database migrations
+cargo install sqlx-cli --no-default-features --features postgres
+sqlx migrate run
 
-# Run oauth2-client (in another terminal)
-cargo run -p oauth2-client
+# Start API server
+cargo run
 
-# Run jwt-service (in another terminal)
-cargo run -p jwt-service
-
-# Test endpoints:
-#   OAuth2 client: http://localhost:8081
-#   JWT health:    http://localhost:8083/health
-#   OAuth2 server: http://localhost:8082 (API - see endpoints in logs)
+# Server running at http://localhost:3000
 ```
 
----
+## Local Development
 
-## Testing & Quality Assurance
+### Prerequisites
 
-**Comprehensive automated test suite** validating all authentication flows:
+- Rust toolchain (install via [rustup](https://rustup.rs/))
+- Docker & Docker Compose
+- `sqlx-cli` for database migrations
 
 ```bash
-# Run complete JWT service test suite (10 automated tests)
-./scripts/test-jwt-service.sh
+cargo install sqlx-cli --no-default-features --features postgres
 ```
 
-**What's tested:**
-- ✅ Token generation & validation (HS256 signing, expiration checking)
-- ✅ Refresh token rotation (prevents replay attacks)
-- ✅ Token revocation & blacklisting (Redis-backed)
-- ✅ Protected route authentication (JWT middleware)
-- ✅ Unauthorized access prevention (401 responses)
-- ✅ Security edge cases (missing tokens, revoked tokens)
+### Development Workflow
 
-**Test output example:**
-```
-🧪 Testing JWT Service
-...
-✓ Token generation
-✓ Token validation (valid)
-✓ Token validation (invalid)
-✓ Refresh token flow
-✓ Refresh token rotation
-✓ Token revocation
-✓ Revoked token validation
-✓ Protected route (valid token)
-✓ Protected route (no token)
-✓ Protected route (revoked token)
-🎉 All JWT service tests passed!
-```
-
-**Additional testing:**
 ```bash
-# Run all workspace tests
+# Format code
+cargo fmt
+
+# Lint
+cargo clippy --all-targets --all-features -- -D warnings
+
+# Build
+cargo build
+
+# Watch mode (requires cargo-watch)
+cargo watch -x run
+```
+
+**Contributing:** See [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## API Endpoints
+
+### WebAuthn
+- `POST /webauthn/register/start` - Begin passkey registration
+- `POST /webauthn/register/finish` - Complete passkey registration
+- `POST /webauthn/auth/start` - Begin passkey authentication
+- `POST /webauthn/auth/finish` - Complete passkey authentication
+- `GET /webauthn/credentials` - List user's passkeys (requires session)
+- `DELETE /webauthn/credentials/:id` - Delete passkey (requires session)
+
+### Core
+- `GET /health` - Health check
+- `GET /metrics` - Prometheus metrics
+- `GET /api/movies` - List movies (demo CRUD)
+- `POST /api/movies` - Create movie (demo CRUD)
+
+**Architecture details:** See [docs/webauthn-architecture.md](docs/webauthn-architecture.md)
+
+## Configuration
+
+### Runtime Environment Variables
+
+| Variable | Default | Description |
+|:---------|:--------|:------------|
+| `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection string |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/axum_db` | PostgreSQL connection string |
+| `API_BIND_ADDR` | `127.0.0.1:8080` | Server bind address |
+| `AXUM_METRICS_TYPE` | `noop` | Metrics backend (`prom` for Prometheus or `noop`) |
+| `AXUM_LOG_LEVEL` | `debug` | Log level (`trace`, `debug`, `info`, `warn`, `error`) |
+| `AXUM_SPAN_EVENTS` | `close` | Tracing span events (`full`, `enter_exit`, `close`) |
+| `AXUM_DB_RETRY_COUNT` | `50` | Database connection retry attempts during startup |
+| `AXUM_DB_ACQUIRE_TIMEOUT_SEC` | `30` | Database connection pool acquire timeout (seconds) |
+
+**Note:** PostgreSQL is required for WebAuthn functionality. Copy `.env.example` to `.env` and customize as needed.
+
+## Testing
+
+Run the complete test suite (matches CI exactly):
+
+```bash
 ./scripts/test-all.sh
-
-# Run local CI pipeline (format, clippy, tests)
-./scripts/ci-local.sh
 ```
 
-**Quality metrics:**
-- 10 automated integration tests
-- CI/CD pipeline validation
-- Code formatting (`cargo fmt`)
-- Linting (`cargo clippy`)
-- Security-focused test scenarios
+**Individual test suites:**
+- `./scripts/run-unit-tests.sh` - Unit tests, linting, format checks, doctests
+- `./scripts/run-integration-tests.sh` - Integration tests with Docker services  
+- `./scripts/ci-local.sh` - Local CI simulation using `act`
 
-See [scripts/test-jwt-service.sh](scripts/test-jwt-service.sh) for complete test implementation.
+**Test Coverage:** 57 tests across unit, integration, and WebAuthn flows. See scripts for detailed breakdowns.
 
----
+### Known Limitations
 
-## Development
+⚠️ **WebAuthn Verification Tests (Issue #33)**
 
-**See [docs/development-setup.md](docs/development-setup.md) for:**
-- Environment setup and configuration
-- Running tests and local CI
-- Code quality checks
-- Development workflow
-- Troubleshooting
+Five WebAuthn tests are currently ignored due to upstream test utility limitations:
+- 2 registration tests (`test_register_finish_*`)
+- 3 authentication tests (`test_auth_start_*`)
 
-**Individual service documentation:**
-- [oauth2-client/README.md](oauth2-client/README.md) - OAuth2 client implementation
-- [oauth2-server/README.md](oauth2-server/README.md) - Authorization server with database
-- [jwt-service/README.md](jwt-service/README.md) - JWT token service with middleware
+These tests require injectable WebAuthn verifier instances for full end-to-end verification. The current implementation validates:
+- ✅ Database operations (user/credential CRUD)
+- ✅ Challenge storage and expiry in Redis
+- ✅ Counter validation and replay prevention
+- ✅ Session creation and validation
+- ⚠️ WebAuthn signature verification (requires browser automation)
 
-**Contributing:**
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Code style, documentation standards, architecture guidelines
+Full verification requires browser-based E2E tests (planned for Phase 5).
 
----
+## Technology Stack
 
-## Architecture
+**Core:**
+- Rust 1.92.0 with Axum 0.8 web framework
+- PostgreSQL 16 for credential storage
+- Redis 7 for sessions and challenges
+- SQLx for compile-time verified queries
 
-Built following Clean Architecture and EMBP (Explicit Module Boundary Pattern).
+**WebAuthn:**
+- `webauthn-rs` - Protocol implementation
+- Public key cryptography (ECDSA, EdDSA)
+- FIDO2/WebAuthn specification compliance
 
-**Key patterns:**
-- Explicit module boundaries via gateway files (`mod.rs`, `lib.rs`)
-- Trait-based abstractions for business logic
-- Comprehensive rustdoc with RFC references
-- Security-first design (token rotation, revocation, middleware)
+**Testing:**
+- Docker Compose for integration test services
+- GitHub Actions CI/CD with caching
+- Local CI runner using `act`
 
-**Code quality:**
-- Automated test coverage for critical paths
-- RFC-compliant implementations (OAuth2 RFC 6749, JWT RFC 7519)
-- Production-ready error handling
-- Logging and observability
+## Project Structure
 
-See [EMBP documentation](https://github.com/JohnBasrai/architecture-patterns/blob/main/rust/embp.md) for architectural details.
+```
+axum-quickstart/
+├── src/
+│   ├── domain/              # Business logic (Repository trait, models)
+│   ├── infrastructure/      # Implementation (PostgreSQL, Redis, WebAuthn)
+│   ├── handlers/            # HTTP handlers (WebAuthn, CRUD, health)
+│   └── lib.rs               # Public API gateway (EMBP)
+├── tests/                   # Integration tests
+├── migrations/              # SQLx database migrations
+├── scripts/                 # Development and CI scripts
+├── docs/                    # Architecture and setup guides
+└── docker-compose.yml       # PostgreSQL + Redis services
+```
 
----
+**Architecture:** Follows [EMBP (Explicit Module Boundary Pattern)](docs/embp.md) and Clean Architecture principles.
+
+**Dependencies flow inward:** Domain defines contracts, Infrastructure provides implementations, Application orchestrates handlers. No database or transport types leak into domain logic.
+
+## Architecture Overview
+
+The project follows a **clean, explicit boundary model:**
+
+* **Domain** — business logic and trait contracts (Repository, User, Credential)
+* **Infrastructure** — concrete implementations (PostgreSQL, Redis, WebAuthn, Metrics)
+* **Application** — Axum handlers and routing
+
+Dependencies flow inward; implementations never leak outward. The service is intentionally designed to be **horizontally scalable**: all persistent and ephemeral state is externalized (PostgreSQL and Redis), and application instances remain stateless.
+
+## Security Highlights
+
+- **Phishing-resistant authentication** - WebAuthn's cryptographic challenge-response prevents phishing
+- **Replay attack prevention** - Signature counters validated on every authentication
+- **ACID-compliant credential storage** - PostgreSQL ensures data integrity with foreign key constraints
+- **Session expiry and challenge TTLs** - Redis automatically expires challenges (5min) and sessions (7 days)
+- **Foreign key constraints** - Credentials cannot exist without users; cascade deletion enforced
+- **Generic error messages** - Prevent username enumeration attacks
+- **Atomic operations** - Redis GETDEL ensures single-use challenges
+
+## WebAuthn Implementation Phases
+
+The following phases describe the incremental addition of **WebAuthn / Passkeys** to the existing axum-quickstart foundation:
+
+### Phase 1: Database Infrastructure ✅ Complete
+- Users and Credentials tables with foreign key constraints
+- Repository pattern with Clean Architecture
+- Counter tracking for replay prevention
+- Multiple credentials per user (multi-device support)
+- 9 unit tests + 1 schema test
+
+### Phase 2: Registration Flow ✅ Complete  
+- Registration endpoints (`/webauthn/register/start`, `/webauthn/register/finish`)
+- Redis-backed challenge storage with automatic expiry
+- webauthn-rs integration for protocol implementation
+- 6 integration tests (2 ignored - Issue #33)
+
+### Phase 3: Authentication Flow ✅ Complete
+- Authentication endpoints (`/webauthn/auth/start`, `/webauthn/auth/finish`)
+- Session token generation with 7-day TTL
+- Counter validation to prevent replay attacks
+- Generic error messages to prevent username enumeration
+- 6 integration tests (3 ignored - Issue #33)
+
+### Phase 4: Credential Management ✅ Complete
+- Credential listing endpoint (`GET /webauthn/credentials`)
+- Credential deletion endpoint (`DELETE /webauthn/credentials/:id`)
+- Session-based authentication with Bearer tokens
+- Ownership verification for secure deletion
+- 7 integration tests
+
+### Phase 5: Browser Testing & Documentation (Planned)
+- Browser-based E2E tests with Playwright
+- Full WebAuthn signature verification
+- Production deployment guide
+- Enhanced flow diagrams
+
+## Next Steps
+
+- **Phase 5:** Browser-based E2E testing with Playwright
+- Enhanced documentation with flow diagrams
+- Production deployment guide
+
+## References
+
+- [WebAuthn Architecture](docs/webauthn-architecture.md) - Implementation details
+- [WebAuthn Specification](https://www.w3.org/TR/webauthn-2/) - W3C standard
+- [SQLx Offline Mode](docs/sqlx-offline-mode-howto.md) - CI/CD guide
 
 ## License
 
