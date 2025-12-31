@@ -1,41 +1,52 @@
-# Axum Quickstart — Production-Oriented API Foundation
+# Axum Quickstart — Movie API with WebAuthn
 
-Axum-based REST API demonstrating incremental integration of WebAuthn/Passkeys authentication into an existing service, with emphasis on correctness, observability, and testing.
+Rust-based Movie API with production grade features: clean architecture, observability, comprehensive testing, and passwordless authentication with WebAuthn/Passkeys.
 
 ## Context
 
-This project demonstrates how to build and evolve a real-world Rust API service with:
+This project demonstrates real-world patterns for building and evolving backend services with Rust:
 
-* **Stateless service design** - horizontally scalable, externalized state
-* **Observability** - metrics, health checks, structured logging
-* **Comprehensive integration testing** - real PostgreSQL and Redis, not mocks
-* **CI parity with local development** - same workflow, same results
+* **Clean Architecture** - dependency inversion with Repository pattern, domain-driven boundaries
+* **Stateless service design** - horizontally scalable with externalized state (PostgreSQL, Redis)
+* **Observability** - Prometheus metrics, health checks, structured logging
+* **Comprehensive testing** - 57 integration tests with real services, not mocks
+* **CI parity** - local development matches CI exactly
 
-**Current work:** Incrementally adding WebAuthn/Passkeys authentication to the existing base, demonstrating how modern authentication is added to real systems—not greenfield demos.
+The codebase showcases incremental feature development, demonstrating how capabilities like passwordless authentication are added to existing systems rather than built as isolated greenfield demos.
 
 ## Overview
 
 This project demonstrates:
 
-- **WebAuthn/Passkeys** - Passwordless authentication (Touch ID, Face ID, YubiKey, Windows Hello)
 - **Clean Architecture** - Dependency inversion with Repository pattern
-- **PostgreSQL** - Authoritative persistence with ACID guarantees for cryptographic credentials
+- **PostgreSQL** - Authoritative persistence with ACID guarantees
 - **Redis** - Session management, challenge storage, and caching
 - **Integration Testing** - 57 automated tests validating real behavior against actual services
+- **WebAuthn/Passkeys** - Passwordless authentication (Touch ID, Face ID, YubiKey, Windows Hello)
 
 ## Features
 
-### WebAuthn Authentication (Passwordless)
-- **Registration** - Create passkey credentials with authenticators
+### Data Persistence & Caching
+- **PostgreSQL** - ACID-compliant storage with foreign key constraints and migrations
+- **Redis** - High-performance caching, session storage, ephemeral challenge data
+- **Repository Pattern** - Clean abstraction layer with trait-based contracts
+
+### Strong Authentication
+- **Registration** - Create passkey credentials with authenticators (WebAuthn)
 - **Authentication** - Login using biometrics or hardware keys
 - **Credential Management** - List and delete registered passkeys
 - **Replay Attack Prevention** - Cryptographic counter validation
 - **Multi-device Support** - Multiple passkeys per account
 
-### Core API
-- Health checks and metrics (Prometheus)
-- CRUD operations with Redis backend
-- Session-based authentication
+### Observability & Operations
+- **Health Checks** - Light and full modes with Redis connectivity validation
+- **Prometheus Metrics** - HTTP request duration, status codes, business metrics (movie creation events)
+- **Structured Logging** - Tracing instrumentation with configurable levels and span events
+
+### CRUD Operations
+- **Movies API** - Full create, read, update, delete with validation
+- **Hash-based IDs** - Deterministic key generation from normalized data
+- **Input Sanitization** - Whitespace normalization, range validation
 
 ## Quick Start
 
@@ -105,19 +116,25 @@ cargo watch -x run
 
 ## API Endpoints
 
-### WebAuthn
-- `POST /webauthn/register/start` - Begin passkey registration
-- `POST /webauthn/register/finish` - Complete passkey registration
-- `POST /webauthn/auth/start` - Begin passkey authentication
-- `POST /webauthn/auth/finish` - Complete passkey authentication
-- `GET /webauthn/credentials` - List user's passkeys (requires session)
-- `DELETE /webauthn/credentials/:id` - Delete passkey (requires session)
+### Core Operations
+- `GET /` - HTML landing page with version and endpoint listing
+- `GET /health` - Health check (light mode by default)
+- `GET /health?mode=full` - Full health check including Redis connectivity
+- `GET /metrics` - Prometheus metrics in text exposition format
 
-### Core
-- `GET /health` - Health check
-- `GET /metrics` - Prometheus metrics
-- `GET /api/movies` - List movies (demo CRUD)
-- `POST /api/movies` - Create movie (demo CRUD)
+### Movies (Redis-backed CRUD)
+- `GET /movies/get/{id}` - Fetch movie by ID (200 OK or 404 Not Found)
+- `POST /movies/add` - Create movie (201 Created or 409 Conflict if duplicate)
+- `PUT /movies/update/{id}` - Update movie (200 OK, allows overwrite)
+- `DELETE /movies/delete/{id}` - Delete movie (204 No Content or 404 Not Found)
+
+### WebAuthn (Passwordless Authentication)
+- `POST /webauthn/register/start` - Begin passkey registration with challenge generation
+- `POST /webauthn/register/finish` - Complete passkey registration and store credential
+- `POST /webauthn/auth/start` - Begin passkey authentication with challenge
+- `POST /webauthn/auth/finish` - Complete passkey authentication and create session
+- `GET /webauthn/credentials` - List user's registered passkeys (requires Bearer token)
+- `DELETE /webauthn/credentials/{id}` - Delete specific passkey (requires Bearer token)
 
 **Architecture details:** See [docs/webauthn-architecture.md](docs/webauthn-architecture.md)
 
@@ -172,18 +189,21 @@ Full verification requires browser-based E2E tests (planned for Phase 5).
 
 ## Technology Stack
 
-**Core:**
-- Rust 1.92.0 with Axum 0.8 web framework
-- PostgreSQL 16 for credential storage
-- Redis 7 for sessions and challenges
+**Framework & Runtime:**
+- Rust 1.92.0 (pinned for sqlx-cli 0.8.2 compatibility) with Axum 0.8 web framework
+- Tokio async runtime
 - SQLx for compile-time verified queries
 
-**WebAuthn:**
-- `webauthn-rs` - Protocol implementation
+**Data Layer:**
+- PostgreSQL 16 for persistent storage
+- Redis 7 for sessions, caching, and ephemeral data
+
+**Authentication:**
+- `webauthn-rs` - WebAuthn protocol implementation
 - Public key cryptography (ECDSA, EdDSA)
 - FIDO2/WebAuthn specification compliance
 
-**Testing:**
+**Testing & CI:**
 - Docker Compose for integration test services
 - GitHub Actions CI/CD with caching
 - Local CI runner using `act`
@@ -210,27 +230,37 @@ axum-quickstart/
 
 ## Architecture Overview
 
-The project follows a **clean, explicit boundary model:**
+The project follows **clean architecture with explicit boundaries:**
 
-* **Domain** — business logic and trait contracts (Repository, User, Credential)
+* **Domain** — business logic and trait contracts (Repository, User, Credential, Movie)
 * **Infrastructure** — concrete implementations (PostgreSQL, Redis, WebAuthn, Metrics)
-* **Application** — Axum handlers and routing
+* **Application** — Axum handlers and HTTP routing
 
-Dependencies flow inward; implementations never leak outward. The service is intentionally designed to be **horizontally scalable**: all persistent and ephemeral state is externalized (PostgreSQL and Redis), and application instances remain stateless.
+Dependencies flow inward; implementations never leak outward. The service is designed for **horizontal scalability**: all persistent state (PostgreSQL) and ephemeral state (Redis) are externalized, keeping application instances stateless.
+
+**Key architectural patterns:**
+- Repository pattern for data access abstraction
+- Dependency injection via AppState
+- EMBP (Explicit Module Boundary Pattern) for module organization
+- Integration testing against real services, not mocks
 
 ## Security Highlights
 
+**Authentication:**
 - **Phishing-resistant authentication** - WebAuthn's cryptographic challenge-response prevents phishing
 - **Replay attack prevention** - Signature counters validated on every authentication
-- **ACID-compliant credential storage** - PostgreSQL ensures data integrity with foreign key constraints
-- **Session expiry and challenge TTLs** - Redis automatically expires challenges (5min) and sessions (7 days)
-- **Foreign key constraints** - Credentials cannot exist without users; cascade deletion enforced
+- **Session expiry** - Redis automatically expires sessions (7 days) and challenges (5 minutes)
 - **Generic error messages** - Prevent username enumeration attacks
+
+**Data Integrity:**
+- **ACID-compliant storage** - PostgreSQL ensures data integrity with foreign key constraints
+- **Foreign key constraints** - Credentials cannot exist without users; cascade deletion enforced
 - **Atomic operations** - Redis GETDEL ensures single-use challenges
+- **Input validation** - All user inputs sanitized and validated before processing
 
-## WebAuthn Implementation Phases
+## WebAuthn Feature Development
 
-The following phases describe the incremental addition of **WebAuthn / Passkeys** to the existing axum-quickstart foundation:
+The following phases demonstrate **incremental addition of WebAuthn/Passkeys** to the existing REST API foundation. This showcases how modern authentication capabilities are integrated into real systems rather than built in isolation.
 
 ### Phase 1: Database Infrastructure ✅ Complete
 - Users and Credentials tables with foreign key constraints
@@ -267,9 +297,14 @@ The following phases describe the incremental addition of **WebAuthn / Passkeys*
 
 ## Next Steps
 
-- **Phase 5:** Browser-based E2E testing with Playwright
-- Enhanced documentation with flow diagrams
-- Production deployment guide
+**WebAuthn:**
+- Browser-based E2E testing with Playwright for full signature verification
+- Production deployment guide with HTTPS requirements
+
+**General Improvements:**
+- Enhanced documentation with architecture flow diagrams
+- Additional API feature demonstrations
+- Performance benchmarking suite
 
 ## References
 

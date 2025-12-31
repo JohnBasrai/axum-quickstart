@@ -36,7 +36,7 @@ pub async fn root_handler(State(state): State<AppState>) -> impl IntoResponse {
       background-color: white;
       padding: 2rem;
       border-radius: 8px;
-      max-width: 700px;
+      max-width: 900px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }}
     h1 {{
@@ -63,18 +63,31 @@ pub async fn root_handler(State(state): State<AppState>) -> impl IntoResponse {
     <h1>AXUM Quickstart — Movie API 👋</h1>
     <p class="version">Version: {version}</p>
     <p>
-      Welcome to the Movie API demo. This project showcases CRUD operations,
-      health checks (including Redis), and dynamic version reporting.
+      Rust Movie API demonstrating clean architecture, observability,
+      CRUD operations, and WebAuthn passwordless authentication.
     </p>
     <pre><code>
 Available endpoints:
-  - GET    /movies/get/{{id}}       Fetch a movie by ID
-  - POST   /movies/add            Add a new movie entry
-  - PUT    /movies/update         Update a movie entry by ID
-  - DELETE /movies/delete         Delete a movie entry by ID
-  - GET    /health                Light health check
-  - GET    /health?mode=full      Full health check (includes Redis)
-  - GET    /metrics               Prometheus metrics endpoint
+
+Core:
+  - GET    /                            This landing page
+  - GET    /health                      Light health check
+  - GET    /health?mode=full            Full health check (includes Redis)
+  - GET    /metrics                     Prometheus metrics endpoint
+
+Movies (CRUD):
+  - GET    /movies/get/{{id}}             Fetch a movie by ID
+  - POST   /movies/add                  Add a new movie entry
+  - PUT    /movies/update/{{id}}          Update a movie entry by ID
+  - DELETE /movies/delete/{{id}}          Delete a movie entry by ID
+
+WebAuthn (Passwordless Auth):
+  - POST   /webauthn/register/start     Begin passkey registration
+  - POST   /webauthn/register/finish    Complete passkey registration
+  - POST   /webauthn/auth/start         Begin passkey authentication
+  - POST   /webauthn/auth/finish        Complete passkey authentication
+  - GET    /webauthn/credentials        List registered passkeys
+  - DELETE /webauthn/credentials/{{id}}   Delete a passkey
     </code></pre>
   </div>
 </body>
