@@ -37,6 +37,9 @@ fn init_tracing() {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load .env file if present (development convenience)
+    dotenvy::dotenv().ok();
+
     // Initialize tracing subscriber to log to stdout
     init_tracing();
     init_database_with_retry_from_env().await?;
