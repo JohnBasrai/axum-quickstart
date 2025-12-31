@@ -37,11 +37,20 @@ fn init_tracing() {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Load .env file if present (development convenience)
-    dotenvy::dotenv().ok();
+    // ---
 
     // Initialize tracing subscriber to log to stdout
     init_tracing();
+
+    // Load .env file if present (development convenience)
+    match dotenvy::dotenv() {
+        Ok(_) => tracing::debug!("Successfully loaded .env file"),
+        Err(e) if e.not_found() => {
+            tracing::warn!("No .env file found (using environment variables)")
+        }
+        Err(e) => tracing::warn!("Failed to parse .env file: {e}"),
+    }
+
     init_database_with_retry_from_env().await?;
 
     // Create router with metrics determined by environment variables
@@ -62,6 +71,8 @@ async fn main() -> Result<()> {
 }
 
 fn shutdown_signal() -> impl std::future::Future<Output = ()> {
+    // ---
+
     use futures::future;
     use tokio::signal::ctrl_c;
     use tokio::signal::unix::{signal, SignalKind};

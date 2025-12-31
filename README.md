@@ -131,9 +131,9 @@ cargo watch -x run
 
 | Variable | Default | Description |
 |:---------|:--------|:------------|
-| `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection string |
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/axum_db` | PostgreSQL connection string |
-| `API_BIND_ADDR` | `127.0.0.1:8080` | Server bind address |
+| `REDIS_URL` | *(required)* | Redis connection string |
+| `DATABASE_URL` | *(required)* | PostgreSQL connection string |
+| `API_BIND_ADDR` | *(required)* | Server bind address |
 | `AXUM_METRICS_TYPE` | `noop` | Metrics backend (`prom` for Prometheus or `noop`) |
 | `AXUM_LOG_LEVEL` | `debug` | Log level (`trace`, `debug`, `info`, `warn`, `error`) |
 | `AXUM_SPAN_EVENTS` | `close` | Tracing span events (`full`, `enter_exit`, `close`) |
