@@ -6,30 +6,17 @@ Rust-based Movie API with production grade features: clean architecture, observa
 
 This project demonstrates real-world patterns for building and evolving backend services with Rust:
 
-* **Clean Architecture** - dependency inversion with Repository pattern, domain-driven boundaries
+* **Dependency Inversion (DIP)** - Domain defines abstract trait contracts (Repository, Metrics); infrastructure provides concrete implementations (PostgresRepository, PrometheusMetrics)
 * **Stateless service design** - horizontally scalable with externalized state (PostgreSQL, Redis)
 * **Observability** - Prometheus metrics, health checks, structured logging
 * **Comprehensive testing** - 57 integration tests with real services, not mocks
 * **CI parity** - local development matches CI exactly
-
-The codebase showcases incremental feature development, demonstrating how capabilities like passwordless authentication are added to existing systems rather than built as isolated greenfield demos.
-
-## Overview
-
-This project demonstrates:
-
-- **Clean Architecture** - Dependency inversion with Repository pattern
-- **PostgreSQL** - Authoritative persistence with ACID guarantees
-- **Redis** - Session management, challenge storage, and caching
-- **Integration Testing** - 57 automated tests validating real behavior against actual services
-- **WebAuthn/Passkeys** - Passwordless authentication (Touch ID, Face ID, YubiKey, Windows Hello)
 
 ## Features
 
 ### Data Persistence & Caching
 - **PostgreSQL** - ACID-compliant storage with foreign key constraints and migrations
 - **Redis** - High-performance caching, session storage, ephemeral challenge data
-- **Repository Pattern** - Clean abstraction layer with trait-based contracts
 
 ### Strong Authentication
 - **Registration** - Create passkey credentials with authenticators (WebAuthn)
@@ -144,9 +131,9 @@ cargo watch -x run
 
 | Variable | Default | Description |
 |:---------|:--------|:------------|
-| `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection string |
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/axum_db` | PostgreSQL connection string |
-| `API_BIND_ADDR` | `127.0.0.1:8080` | Server bind address |
+| `REDIS_URL` | *(required)* | Redis connection string |
+| `DATABASE_URL` | *(required)* | PostgreSQL connection string |
+| `API_BIND_ADDR` | *(required)* | Server bind address |
 | `AXUM_METRICS_TYPE` | `noop` | Metrics backend (`prom` for Prometheus or `noop`) |
 | `AXUM_LOG_LEVEL` | `debug` | Log level (`trace`, `debug`, `info`, `warn`, `error`) |
 | `AXUM_SPAN_EVENTS` | `close` | Tracing span events (`full`, `enter_exit`, `close`) |
@@ -239,7 +226,7 @@ The project follows **clean architecture with explicit boundaries:**
 Dependencies flow inward; implementations never leak outward. The service is designed for **horizontal scalability**: all persistent state (PostgreSQL) and ephemeral state (Redis) are externalized, keeping application instances stateless.
 
 **Key architectural patterns:**
-- Repository pattern for data access abstraction
+- Dependency Inversion Principle (DIP) via trait-based contracts
 - Dependency injection via AppState
 - EMBP (Explicit Module Boundary Pattern) for module organization
 - Integration testing against real services, not mocks
