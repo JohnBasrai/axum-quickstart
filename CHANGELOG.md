@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - None
 
+## [1.4.1] - 2025-01-12
+
+### Changed
+   - **EMBP Compliance**: handlers/mod.rs now uses private modules with explicit gateway exports (fixes section 3.3 violation)
+   - lib.rs uses gateway imports instead of deep module access
+
 ## [1.4.0] - 2024-12-30
 
 ### Added

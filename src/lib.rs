@@ -6,8 +6,20 @@ use axum::{
     Router,
 };
 use handlers::{
-    add_movie, auth_finish, auth_start, delete_credential, delete_movie, get_movie, health_check,
-    list_credentials, metrics_handler, register_finish, register_start, root_handler, update_movie,
+    //
+    add_movie,
+    auth_finish,
+    auth_start,
+    delete_credential,
+    delete_movie,
+    get_movie,
+    health_check,
+    list_credentials,
+    metrics_handler,
+    register_finish,
+    register_start,
+    root_handler,
+    update_movie,
 };
 use redis::Client;
 use std::env;
