@@ -1,4 +1,4 @@
-use crate::handlers::shared_types::ApiResponse;
+use super::ApiResponse;
 use crate::AppState;
 use axum::{
     extract::{Path, State},
