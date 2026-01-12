@@ -5,11 +5,22 @@ use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-
-use handlers::health::health_check;
-use handlers::metrics::metrics_handler;
-use handlers::movies::*;
-use handlers::root::root_handler;
+use handlers::{
+    //
+    add_movie,
+    auth_finish,
+    auth_start,
+    delete_credential,
+    delete_movie,
+    get_movie,
+    health_check,
+    list_credentials,
+    metrics_handler,
+    register_finish,
+    register_start,
+    root_handler,
+    update_movie,
+};
 use redis::Client;
 use std::env;
 
@@ -83,30 +94,12 @@ pub fn create_router() -> Result<Router> {
         .nest(
             "/webauthn",
             Router::new()
-                .route(
-                    "/register/start",
-                    post(handlers::webauthn_register::register_start),
-                )
-                .route(
-                    "/register/finish",
-                    post(handlers::webauthn_register::register_finish),
-                )
-                .route(
-                    "/auth/start",
-                    post(handlers::webauthn_authenticate::auth_start),
-                )
-                .route(
-                    "/auth/finish",
-                    post(handlers::webauthn_authenticate::auth_finish),
-                )
-                .route(
-                    "/credentials",
-                    get(handlers::webauthn_credentials::list_credentials),
-                )
-                .route(
-                    "/credentials/{id}",
-                    delete(handlers::webauthn_credentials::delete_credential),
-                ),
+                .route("/register/start", post(register_start))
+                .route("/register/finish", post(register_finish))
+                .route("/auth/start", post(auth_start))
+                .route("/auth/finish", post(auth_finish))
+                .route("/credentials", get(list_credentials))
+                .route("/credentials/{id}", delete(delete_credential)),
         )
         .with_state(app_state);
 
