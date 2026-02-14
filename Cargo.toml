@@ -2,7 +2,6 @@
 name = "axum-quickstart"
 version = "1.4.1"
 edition = "2021"
-authors = ["John Basrai <john@basrai.dev>"]
 description = "Axum Quick-Start API with Redis backend, full CRUD, and integration tests."
 license = "MIT"
 readme = "README.md"

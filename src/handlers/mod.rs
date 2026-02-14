@@ -10,6 +10,8 @@ mod webauthn_authenticate;
 mod webauthn_credentials;
 mod webauthn_register;
 
+use shared_types::ApiResponse;
+
 // Core handlers
 pub use health::health_check;
 pub use metrics::metrics_handler;
