@@ -1,6 +1,6 @@
 [package]
 name = "axum-quickstart"
-version = "1.4.1"
+version = "1.4.2"
 edition = "2021"
 description = "Axum Quick-Start API with Redis backend, full CRUD, and integration tests."
 license = "MIT"

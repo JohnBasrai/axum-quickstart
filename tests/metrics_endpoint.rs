@@ -15,7 +15,8 @@ async fn metrics_endpoint_with_prometheus() {
     // ---
     // Set environment to use Prometheus metrics for this test
     common::setup_test_env().await;
-    std::env::set_var("AXUM_METRICS_TYPE", "prom");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("AXUM_METRICS_TYPE", "prom") };
 
     let server = common::TestServer::new().await;
 
@@ -69,7 +70,8 @@ async fn metrics_endpoint_with_prometheus() {
     }
 
     // Clean up environment variable
-    std::env::remove_var("AXUM_METRICS_TYPE");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("AXUM_METRICS_TYPE") };
 }
 
 #[tokio::test]
@@ -78,7 +80,8 @@ async fn metrics_endpoint_with_noop() {
     // ---
     // Set environment to use noop metrics (or don't set it)
     common::setup_test_env().await;
-    std::env::set_var("AXUM_METRICS_TYPE", "noop");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("AXUM_METRICS_TYPE", "noop") };
 
     let server = common::TestServer::new().await;
 
@@ -109,7 +112,8 @@ async fn metrics_endpoint_with_noop() {
     println!("Noop metrics response: '{body}'");
 
     // Clean up environment variable
-    std::env::remove_var("AXUM_METRICS_TYPE");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("AXUM_METRICS_TYPE") };
 }
 
 #[tokio::test]
@@ -117,7 +121,8 @@ async fn metrics_endpoint_with_noop() {
 async fn metrics_endpoint_survives_load() {
     // ---
     common::setup_test_env().await;
-    std::env::set_var("AXUM_METRICS_TYPE", "prom");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("AXUM_METRICS_TYPE", "prom") };
 
     let server = Arc::new(common::TestServer::new().await);
 
@@ -163,7 +168,8 @@ async fn metrics_endpoint_survives_load() {
     assert!(!body.is_empty());
     println!("Got metrics:{body}");
 
-    std::env::remove_var("AXUM_METRICS_TYPE");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("AXUM_METRICS_TYPE") };
 }
 
 #[tokio::test]
@@ -171,7 +177,8 @@ async fn metrics_endpoint_survives_load() {
 async fn metrics_content_type_is_correct() {
     // ---
     common::setup_test_env().await;
-    std::env::set_var("AXUM_METRICS_TYPE", "prom");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("AXUM_METRICS_TYPE", "prom") };
 
     let server = common::TestServer::new().await;
 
@@ -199,5 +206,6 @@ async fn metrics_content_type_is_correct() {
         );
     }
 
-    std::env::remove_var("AXUM_METRICS_TYPE");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::remove_var("AXUM_METRICS_TYPE") };
 }

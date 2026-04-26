@@ -11,9 +11,10 @@ use tokio::time::sleep;
 
 macro_rules! set_env_if_unset {
     // ---
-    ($key:expr, $val:expr) => {
+    ($key:expr_2021, $val:expr_2021) => {
         if std::env::var($key).is_err() {
-            std::env::set_var($key, $val);
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var($key, $val) };
         }
     };
 }

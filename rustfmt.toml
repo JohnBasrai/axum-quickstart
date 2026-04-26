@@ -2,7 +2,7 @@
 # This file contains ONLY stable options that work with stable Rust
 
 # Edition settings
-edition = "2021"
+edition = "2024"
 
 # Basic formatting
 max_width = 100
