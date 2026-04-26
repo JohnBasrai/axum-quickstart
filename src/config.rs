@@ -37,7 +37,7 @@ macro_rules! required_env {
 /// tuning parameters where fallback behavior is acceptable.
 macro_rules! optional_env_parse {
     // ---
-    ($key:literal, $ty:ty, $default:expr) => {
+    ($key:literal, $ty:ty, $default:expr_2021) => {
         std::env::var($key)
             .ok()
             .and_then(|v| v.parse::<$ty>().ok())
@@ -53,7 +53,7 @@ macro_rules! optional_env_parse {
 /// consistent error messages across failure cases.
 macro_rules! assert_missing_config {
     // ---
-    ($expr:expr, $key:literal) => {{
+    ($expr:expr_2021, $key:literal) => {{
         let err = $expr.expect_err("expected configuration error");
         assert!(
             err.to_string()
@@ -268,8 +268,10 @@ mod tests {
 
         // restore previous value
         match prev {
-            Some(v) => std::env::set_var(name, v),
-            None => std::env::remove_var(name),
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            Some(v) => unsafe { std::env::set_var(name, v) },
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            None => unsafe { std::env::remove_var(name) },
         }
     }
 
@@ -278,7 +280,8 @@ mod tests {
     fn missing_database_url_fails() {
         // ---
         run_with_env_restored(|| {
-            std::env::remove_var("DATABASE_URL");
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::remove_var("DATABASE_URL") };
             assert_missing_config!(database::DatabaseConfig::from_env(), "DATABASE_URL");
         });
     }
@@ -290,12 +293,17 @@ mod tests {
         run_with_env_restored(|| {
             // ---
             let db_url = "postgres://test";
-            std::env::set_var("DATABASE_URL", db_url); // requried
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("DATABASE_URL", db_url) }; // requried
 
-            std::env::remove_var("AXUM_DB_RETRY_COUNT");
-            std::env::remove_var("AXUM_DB_ACQUIRE_TIMEOUT_SEC");
-            std::env::remove_var("AXUM_DB_MIN_CONNECTIONS");
-            std::env::remove_var("AXUM_DB_MAX_CONNECTIONS");
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::remove_var("AXUM_DB_RETRY_COUNT") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::remove_var("AXUM_DB_ACQUIRE_TIMEOUT_SEC") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::remove_var("AXUM_DB_MIN_CONNECTIONS") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::remove_var("AXUM_DB_MAX_CONNECTIONS") };
 
             let cfg = database::DatabaseConfig::from_env().unwrap();
 
@@ -314,11 +322,16 @@ mod tests {
         run_with_env_restored(|| {
             // ---
             let db_url = "postgres://test";
-            std::env::set_var("DATABASE_URL", db_url);
-            std::env::set_var("AXUM_DB_RETRY_COUNT", "3");
-            std::env::set_var("AXUM_DB_ACQUIRE_TIMEOUT_SEC", "5");
-            std::env::set_var("AXUM_DB_MIN_CONNECTIONS", "10");
-            std::env::set_var("AXUM_DB_MAX_CONNECTIONS", "1000");
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("DATABASE_URL", db_url) };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("AXUM_DB_RETRY_COUNT", "3") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("AXUM_DB_ACQUIRE_TIMEOUT_SEC", "5") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("AXUM_DB_MIN_CONNECTIONS", "10") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("AXUM_DB_MAX_CONNECTIONS", "1000") };
 
             let cfg = database::DatabaseConfig::from_env().unwrap();
             assert_eq!(cfg.retry_count, 3);
@@ -335,10 +348,14 @@ mod tests {
         // ---
         run_with_env_restored(|| {
             // ---
-            std::env::set_var("DATABASE_URL", "postgres://test");
-            std::env::set_var("REDIS_URL", "redis://localhost");
-            std::env::set_var("AXUM_WEBAUTHN_RP_ID", "example.com");
-            std::env::set_var("AXUM_WEBAUTHN_ORIGIN", "https://example.com");
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("DATABASE_URL", "postgres://test") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("REDIS_URL", "redis://localhost") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("AXUM_WEBAUTHN_RP_ID", "example.com") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { std::env::set_var("AXUM_WEBAUTHN_ORIGIN", "https://example.com") };
 
             let cfg = AppConfig::from_env().unwrap();
             assert_eq!(cfg.webauthn.rp_name, "Axum Quickstart");
