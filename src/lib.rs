@@ -47,14 +47,11 @@ pub use infrastructure::{
     create_webauthn,
 };
 
-/// Build the HTTP router with metrics implementation determined by environment variables.
-pub fn create_router() -> Result<Router> {
+/// Build the HTTP router with metrics type injected directly.
+pub fn create_router_with_metrics(metrics_type: &str) -> Result<Router> {
     // ---
-    // Load all configuration from environment
     let config = AppConfig::from_env()?;
 
-    // Determine metrics implementation from environment
-    let metrics_type = env::var("AXUM_METRICS_TYPE").unwrap_or_else(|_| "noop".to_string());
     let metrics = if metrics_type == "prom" {
         create_prom_metrics()?
     } else {
@@ -104,4 +101,10 @@ pub fn create_router() -> Result<Router> {
         .with_state(app_state);
 
     Ok(router)
+}
+
+/// Build the HTTP router with metrics type read from `AXUM_METRICS_TYPE` env var.
+pub fn create_router() -> Result<Router> {
+    let metrics_type = env::var("AXUM_METRICS_TYPE").unwrap_or_else(|_| "noop".to_string());
+    create_router_with_metrics(&metrics_type)
 }
