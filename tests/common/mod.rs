@@ -1,7 +1,7 @@
 // Test helpers are intentionally partially used
 #![allow(dead_code)]
 
-use axum_quickstart::create_router;
+use axum_quickstart::create_router_with_metrics;
 use axum_quickstart::domain::init_database_with_retry_from_env;
 use reqwest::Client;
 use std::sync::Once;
@@ -10,10 +10,8 @@ use tokio::net::TcpListener;
 use tokio::time::sleep;
 
 macro_rules! set_env_if_unset {
-    // ---
     ($key:expr_2021, $val:expr_2021) => {
         if std::env::var($key).is_err() {
-            // TODO: Audit that the environment access only happens in single-threaded code.
             unsafe { std::env::set_var($key, $val) };
         }
     };
@@ -53,25 +51,26 @@ pub struct TestServer {
 }
 
 impl TestServer {
-    // ---
     pub async fn new() -> Self {
-        // --
+        Self::with_metrics("noop").await
+    }
 
-        let app = create_router().expect("Should be able to create router");
+    pub async fn with_metrics(metrics_type: &str) -> Self {
+        let app =
+            create_router_with_metrics(metrics_type).expect("Should be able to create router");
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
 
-        // Spawn the server in the background
         tokio::spawn(async move {
             axum::serve(listener, app).await.unwrap();
         });
 
-        // Give the server a moment to start
         sleep(Duration::from_millis(100)).await;
 
-        let client = Client::new();
-
-        Self { addr, client }
+        Self {
+            addr,
+            client: Client::new(),
+        }
     }
 
     pub fn url(&self, path: &str) -> String {
