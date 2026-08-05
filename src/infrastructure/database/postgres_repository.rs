@@ -278,6 +278,9 @@ mod schema_tests {
     #[tokio::test(flavor = "current_thread")]
     async fn users_delete_cascades_credentials() {
         // ---
+        if env::var("DATABASE_URL").is_err() {
+            return; // Skip test if database not configured
+        }
         let pool = test_pool().await;
 
         let user_id = Uuid::new_v4();

@@ -56,6 +56,9 @@ async fn setup_repo() -> crate::domain::RepositoryPtr {
 #[test]
 fn test_create_and_get_user() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // --
         init().await;
@@ -96,6 +99,9 @@ fn test_create_and_get_user() {
 #[test]
 fn test_get_nonexistent_user() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // ---
         init().await;
@@ -122,6 +128,9 @@ fn test_get_nonexistent_user() {
 #[test]
 fn test_username_must_be_unique() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // ---
         init().await;
@@ -144,6 +153,9 @@ fn test_username_must_be_unique() {
 #[test]
 fn test_save_and_get_credential() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // ---
         init().await;
@@ -182,6 +194,9 @@ fn test_save_and_get_credential() {
 #[test]
 fn test_get_credentials_by_user() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // ---
         init().await;
@@ -225,6 +240,9 @@ fn test_get_credentials_by_user() {
 #[test]
 fn test_update_credential_counter() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // ---
         init().await;
@@ -277,6 +295,9 @@ fn test_update_credential_counter() {
 #[test]
 fn test_delete_credential() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // ---
         init().await;
@@ -318,6 +339,9 @@ fn test_delete_credential() {
 #[test]
 fn test_z_credential_without_user_fails() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // ---
         init().await;
@@ -336,6 +360,9 @@ fn test_z_credential_without_user_fails() {
 #[test]
 fn test_multiple_credentials_per_user() {
     // ---
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip test if database not configured
+    }
     RUNTIME.block_on(async {
         // ---
         init().await;
